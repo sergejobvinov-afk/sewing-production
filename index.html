@@ -916,45 +916,91 @@ var QRGen=(function(){
       showScreen('home', 'Швейное производство', 'Система учета');
     }
 
-    // ===== QR SCANNER =====
-    function startScanner(target) {
-      var readerId = target + '-qr-reader';
-      if (!document.getElementById(readerId)) return;
-      if (scanners[target]) { try{scanners[target].stop();}catch(e){} }
-      var scanner = new Html5Qrcode(readerId);
-      scanners[target] = scanner;
-      scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:250},aspectRatio:1},
-        function(text){scanner.stop().then(function(){delete scanners[target];onQrScanned(target,text);});},
-        function(){}
-      ).catch(function(err){showToast('Камера недоступна',true);switchScanMode(target,'manual');});
-    }
-    
-    function tryCameraQuiet(target){
-      // Пробуем камеру тихо. Если доступна - переключаем. Если нет - молча остаёмся на ручном вводе.
-      try{
-        if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-          navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(stream){
-            // Камера доступна! Останавливаем тестовый поток и запускаем сканер
-            stream.getTracks().forEach(function(t){t.stop();});
-            switchScanMode(target,'camera');
-            startScanner(target);
-          }).catch(function(){
-            // Камера недоступна - остаёмся на ручном вводе, без сообщений
-          });
-        }
-      }catch(e){}
-    }
+    // ===== Вспомогательная функция: извлечь ID пачки из QR-строки =====
+function extractPackId(raw) {
+  if (!raw) return '';
+  var parts = raw.split('|');
+  var candidate = parts[0].trim();
+  return candidate;
+}
 
-    function stopAllScanners(){Object.keys(scanners).forEach(function(k){try{scanners[k].stop();}catch(e){}delete scanners[k];});}
-    function switchScanMode(target,mode){
-      var cam=document.getElementById(target+'-camera-area'),man=document.getElementById(target+'-manual-area');
-      var tabs=document.querySelectorAll('#screen-'+target+' .scan-tab');
-      if(mode==='camera'){if(cam)cam.style.display='block';if(man)man.style.display='none';if(tabs[0])tabs[0].classList.add('active');if(tabs[1])tabs[1].classList.remove('active');startScanner(target);}
-      else{if(cam)cam.style.display='none';if(man)man.style.display='block';if(tabs[0])tabs[0].classList.remove('active');if(tabs[1])tabs[1].classList.add('active');if(scanners[target]){try{scanners[target].stop();}catch(e){}delete scanners[target];}}
-    }
-    function manualQrSubmit(target){var v=document.getElementById(target+'-manual-qr').value.trim();if(!v){showToast('Введите ID',true);return;}onQrScanned(target,v);}
-    function onQrScanned(target,qr){currentQR[target]=qr;if(target==='issue')onIssueScan(qr);else if(target==='accept')onAcceptScan(qr);else if(target==='status')checkStatus(qr);}
+// ===== QR SCANNER =====
+function startScanner(target) {
+  var readerId = target + '-qr-reader';
+  if (!document.getElementById(readerId)) return;
+  if (scanners[target]) { try{scanners[target].stop();}catch(e){} }
+  var scanner = new Html5Qrcode(readerId);
+  scanners[target] = scanner;
+  scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:250},aspectRatio:1},
+    function(text){
+      scanner.stop().then(function(){
+        delete scanners[target];
+        onQrScanned(target, text);
+      });
+    },
+    function(){}
+  ).catch(function(err){showToast('Камера недоступна',true);switchScanMode(target,'manual');});
+}
 
+function tryCameraQuiet(target){
+  try{
+    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+      navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}).then(function(stream){
+        stream.getTracks().forEach(function(t){t.stop();});
+        switchScanMode(target,'camera');
+        startScanner(target);
+      }).catch(function(){});
+    }
+  }catch(e){}
+}
+
+function stopAllScanners(){
+  Object.keys(scanners).forEach(function(k){
+    try{scanners[k].stop();}catch(e){}
+    delete scanners[k];
+  });
+}
+
+function switchScanMode(target,mode){
+  var cam=document.getElementById(target+'-camera-area'),man=document.getElementById(target+'-manual-area');
+  var tabs=document.querySelectorAll('#screen-'+target+' .scan-tab');
+  if(mode==='camera'){
+    if(cam)cam.style.display='block';
+    if(man)man.style.display='none';
+    if(tabs[0])tabs[0].classList.add('active');
+    if(tabs[1])tabs[1].classList.remove('active');
+    startScanner(target);
+  } else {
+    if(cam)cam.style.display='none';
+    if(man)man.style.display='block';
+    if(tabs[0])tabs[0].classList.remove('active');
+    if(tabs[1])tabs[1].classList.add('active');
+    if(scanners[target]){
+      try{scanners[target].stop();}catch(e){}
+      delete scanners[target];
+    }
+  }
+}
+
+function manualQrSubmit(target){
+  var v = document.getElementById(target+'-manual-qr').value.trim();
+  if(!v){ showToast('Введите ID или отсканируйте QR', true); return; }
+  var packId = extractPackId(v);
+  if(!packId){ showToast('Неверный формат QR-кода', true); return; }
+  onQrScanned(target, packId);
+}
+
+function onQrScanned(target, rawQr){
+  var packId = extractPackId(rawQr);
+  if(!packId){
+    showToast('Не удалось распознать ID пачки', true);
+    return;
+  }
+  currentQR[target] = packId;
+  if(target==='issue') onIssueScan(packId);
+  else if(target==='accept') onAcceptScan(packId);
+  else if(target==='status') checkStatus(packId);
+}
     // ===== ISSUE =====
     function openIssue(){resetIssueScreen();showScreen('issue','📤 Выдача','Взять в пошив');switchScanMode('issue','manual');tryCameraQuiet('issue');}
     function resetIssueScreen(){
