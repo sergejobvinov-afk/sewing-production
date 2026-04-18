@@ -68,18 +68,21 @@ var API = (function() {
   // GET-запрос (для чтения данных)
   // ============================================================
   function apiGet(action, params) {
-    var url = getBaseUrl() + '?action=' + encodeURIComponent(action);
-    if (params) {
-      Object.keys(params).forEach(function(key) {
-        if (params[key] !== undefined && params[key] !== null) {
-          url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
-        }
-      });
-    }
-    
-    return fetch(url, {
-      method: 'GET',
-      redirect: 'follow'
+  var url = getBaseUrl() + '?action=' + encodeURIComponent(action);
+  if (params) {
+    Object.keys(params).forEach(function(key) {
+      if (params[key] !== undefined && params[key] !== null) {
+        url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+      }
+    });
+  }
+  // Добавляем случайный параметр для обхода кэша
+  url += '&_=' + Date.now();
+  
+  return fetch(url, {
+    method: 'GET',
+    cache: 'no-store',
+    redirect: 'follow'
     })
     .then(function(resp) {
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
