@@ -1066,27 +1066,32 @@ function onQrScanned(target, rawQr){
       document.getElementById('accept-step-num').textContent='1';
       document.getElementById('accept-step-text').textContent='Отсканируйте QR-код пачки';
     }
-    function onAcceptScan(qr){
-      document.getElementById('accept-scan-area').style.display='none';
-      document.getElementById('accept-step-num').textContent='2';
-      document.getElementById('accept-step-text').textContent='Введите количество ОТК';
-      document.getElementById('accept-qr-display').textContent=qr;
-      showLoading('accept',true);
-      API.getPackStatus(qr,currentUser.pin)
-      .then(function(r){
-        showLoading('accept',false);
-        if(r&&r.success){
-          packData['accept']=r;
-          document.getElementById('accept-pack-info').innerHTML=packInfoHtml(r);
-          document.getElementById('accept-max-qty').textContent=r.qty;
-          document.getElementById('accept-otk-qty').max=r.qty;
-          document.getElementById('accept-otk-qty').value=r.qty;
-          document.getElementById('accept-otk-area').style.display='block';
-        }else{showResultCard('accept',false,r?r.message:'Ошибка');}
-      })
-      .catch(function(e){showLoading('accept',false);showResultCard('accept',false,'Ошибка: '+e.message);});
-    }
-    
+    function onAcceptScan(qr) {
+  document.getElementById('accept-scan-area').style.display = 'none';
+  document.getElementById('accept-step-num').textContent = '2';
+  document.getElementById('accept-step-text').textContent = 'Введите количество ОТК';
+  document.getElementById('accept-qr-display').textContent = qr;
+  showLoading('accept', true);
+  API.getPackStatus(qr, currentUser.pin)
+    .then(function(r) {
+      if (r && r.success) {
+        packData['accept'] = r;
+        document.getElementById('accept-pack-info').innerHTML = packInfoHtml(r);
+        document.getElementById('accept-max-qty').textContent = r.qty;
+        document.getElementById('accept-otk-qty').max = r.qty;
+        document.getElementById('accept-otk-qty').value = r.qty;
+        document.getElementById('accept-otk-area').style.display = 'block';
+        showLoading('accept', false);
+      } else {
+        showLoading('accept', false);
+        showResultCard('accept', false, r ? r.message : 'Ошибка получения данных пачки');
+      }
+    })
+    .catch(function(e) {
+      showLoading('accept', false);
+      showResultCard('accept', false, 'Ошибка соединения: ' + e.message);
+    });
+}
     function submitAccept(){
       var otkQty=document.getElementById('accept-otk-qty').value;
       if(!otkQty||isNaN(Number(otkQty))||Number(otkQty)<0){showToast('Введите количество',true);return;}
@@ -1473,10 +1478,13 @@ function onQrScanned(target, rawQr){
     function passRow(lbl,val){return '<div class="passport-row"><span class="passport-label">'+lbl+'</span><span class="passport-value">'+val+'</span></div>';}
     function dashItem(val,lbl,cls){return '<div class="dash-item '+cls+'"><div class="dash-value">'+val+'</div><div class="dash-label">'+lbl+'</div></div>';}
     function showLoading(t,s){var e=document.getElementById(t+'-loading');if(e){if(s)e.classList.add('active');else e.classList.remove('active');}}
-    function showResultCard(t,ok,msg){
-      var c=document.getElementById(t+'-result');if(!c)return;
-      c.innerHTML='<div class="result-card '+(ok?'success':'error')+'"><div class="result-icon">'+(ok?'✅':'❌')+'</div><div class="result-message">'+escapeHtml(msg)+'</div><button class="action-btn btn-secondary" onclick="goHome()" style="margin-top:16px;">🏠 На главную</button></div>';
-      c.style.display='block';
+    function showResultCard(t, ok, msg){
+  var c = document.getElementById(t+'-result');
+  if(!c) return;
+  showLoading(t, false);   // <-- добавленная строка
+  c.innerHTML='<div class="result-card '+(ok?'success':'error')+'"><div class="result-icon">'+(ok?'✅':'❌')+'</div><div class="result-message">'+escapeHtml(msg)+'</div><button class="action-btn btn-secondary" onclick="goHome()" style="margin-top:16px;">🏠 На главную</button></div>';
+  c.style.display='block';
+
     }
     function showToast(msg,err){var t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(err?' error':'');setTimeout(function(){t.className='toast';},3000);}
     function formatNum(n){if(!n&&n!==0)return '0';return Number(n).toLocaleString('ru-RU');}
