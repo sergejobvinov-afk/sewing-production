@@ -1018,22 +1018,26 @@ function renderIssueOperations(operations, packQty) {
   });
   html += '</div><button class="action-btn btn-success" onclick="submitIssueWithOps()">✅ Выдать в пошив</button>';
   document.getElementById('issue-ops-container').innerHTML = html;
-  // Загрузить список швей для селектов
+  
   API.getSewerList(currentUser.pin).then(function(sewers) {
     var selects = document.querySelectorAll('#issue-ops-list .issue-sewer-select');
     selects.forEach(function(sel) {
+      // Очищаем старые опции, оставляя только "-- Выберите --"
+      while (sel.options.length > 1) sel.remove(1);
       sewers.forEach(function(s) {
         var opt = document.createElement('option');
         opt.value = s;
         opt.textContent = s;
         sel.appendChild(opt);
       });
-if (sewers.length > 0) {
-    selects.forEach(function(sel) {
-        sel.value = sewers[0]; // выбираем первую швею
-        console.log('Set select value to', sewers[0]);
-    });
-}
+      // Принудительно выбираем первую швею (если есть)
+      if (sewers.length > 0) {
+        sel.value = sewers[0];
+        // Дополнительно генерируем событие change, чтобы браузер зафиксировал выбор
+        var evt = document.createEvent('HTMLEvents');
+        evt.initEvent('change', false, true);
+        sel.dispatchEvent(evt);
+      }
     });
   }).catch(function(e) { console.error(e); });
 }
@@ -1046,11 +1050,20 @@ function submitIssueWithOps() {
     return;
   }
   var selects = document.querySelectorAll('#issue-ops-list .issue-sewer-select');
+  
+  // Принудительно устанавливаем значения, если они пустые (защита)
+  for (var i = 0; i < selects.length; i++) {
+    if (!selects[i].value) {
+      for (var j = 0; j < selects[i].options.length; j++) {
+        if (selects[i].options[j].value) {
+          selects[i].value = selects[i].options[j].value;
+          break;
+        }
+      }
+    }
+  }
+  
   var operationsData = [];
-console.log('Selects count:', selects.length);
-for (var i = 0; i < selects.length; i++) {
-    console.log('Select', i, 'value:', selects[i].value);
-}
   for (var i = 0; i < selects.length; i++) {
     var sewer = selects[i].value;
     if (!sewer) {
@@ -1077,7 +1090,6 @@ for (var i = 0; i < selects.length; i++) {
       showToast('Ошибка: ' + e.message, true);
     });
 }
-
 // ===== Функции для работы с операциями (приёмка) =====
 function renderAcceptOperations(operations, packQty) {
   var html = '<div style="margin-bottom:12px;">Общее количество: <strong>' + packQty + '</strong> шт.</div>';
