@@ -1035,6 +1035,10 @@ function renderIssueOperations(operations, packQty) {
 function submitIssueWithOps() {
   var qr = currentQR['issue'];
   if (!qr) { showToast('QR не найден', true); return; }
+  if (!packData['issue'].modelOperations) {
+    showToast('Ошибка: данные операций не загружены', true);
+    return;
+  }
   var selects = document.querySelectorAll('#issue-ops-list .issue-sewer-select');
   var operationsData = [];
   for (var i = 0; i < selects.length; i++) {
@@ -1043,8 +1047,7 @@ function submitIssueWithOps() {
       showToast('Для операции ' + (i+1) + ' не выбрана швея', true);
       return;
     }
-    // Название операции берём из сохранённых данных
-    var opName = packData['issue'].operations ? packData['issue'].operations[i].name : 'Операция ' + (i+1);
+    var opName = packData['issue'].modelOperations[i].name;
     operationsData.push({ operationName: opName, sewerName: sewer });
   }
   showLoading('issue', true);
@@ -1280,6 +1283,7 @@ function onQrScanned(target, rawQr){
         packData['issue'] = r;
         // Загружаем операции модели
         API.getModelOperations(r.model).then(function(ops) {
+packData['issue'].modelOperations = ops;
           showLoading('issue', false);
           if (ops && ops.length) {
             renderIssueOperations(ops, r.qty);
