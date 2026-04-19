@@ -562,19 +562,40 @@ var QRGen=(function(){
     }
     
     @media print {
-      body { background: white; }
-      .header, .back-btn, .container > *:not(#screen-passport),
-      .action-btn, .toast { display: none !important; }
-      #screen-passport { display: block !important; }
-      .passport-card {
-        border: 2px solid #000; margin: 10mm; padding: 8mm;
-        width: 90mm; page-break-inside: avoid;
-      }
-      .passport-header { font-size: 14pt; }
-      .passport-row { font-size: 11pt; }
-      .passport-ops-list span { font-size: 10pt; }
-      .no-print { display: none !important; }
+  body { background: white; margin: 0; padding: 0; }
+  .header, .back-btn, .container > *:not(#screen-multipassport),
+  .action-btn, .toast, .no-print { display: none !important; }
+  #screen-multipassport { display: block !important; }
+  
+  /* Сетка для нескольких паспортов */
+  #multipassport-content {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8mm;
+    page-break-before: avoid;
+  }
+  
+  .passport-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border: 1px solid #ccc;
+    margin: 0;
+    box-shadow: none;
+  }
+  
+  /* Если места мало — одна колонка */
+  @media (max-width: 200mm) {
+    #multipassport-content {
+      grid-template-columns: 1fr;
     }
+  }
+  
+  /* Ориентация и поля (опционально) */
+  @page {
+    size: A4 portrait; /* можно landscape */
+    margin: 10mm;
+  }
+}
   </style>
 </head>
 <body>
@@ -1364,7 +1385,7 @@ function onQrScanned(target, rawQr){
         }
         var qrContent=d.id+'|'+d.model+'|'+(d.operations?d.operations.join(','):'')+'|'+(d.color||'')+'|'+d.size+'|'+d.qty;
         
-        html+='<div class="passport-card" style="page-break-after:always;margin-bottom:20px;">';
+        html+='<div class="passport-card">';
         html+='<div class="passport-header">ПАСПОРТ ПАЧКИ</div>';
         html+='<div class="passport-body">';
         html+='<div class="passport-info">';
