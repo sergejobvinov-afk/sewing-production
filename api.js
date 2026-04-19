@@ -5,7 +5,7 @@
 
 var API = (function() {
   // ⚠️ ЗАМЕНИТЕ НА URL ВАШЕГО РАЗВЕРНУТОГО СКРИПТА
-  var BASE_URL = 'https://script.google.com/macros/s/AKfycbwRCEgl3VxZ9XldFBWKkD4j91xzNMBs94x2XcKpOLISjdCv83ZbS_sZBQWUi8Rau_g/exec';
+  var BASE_URL = 'https://script.google.com/macros/s/AKfycbz1u6zcSsQAxv6ej_ls_u7MBLCSLhPHn182vZDk5feYPycX72YcudjGTCSwK15i6Knx/exec';
   
   // Индикатор статуса API
   var _statusEl = null;
@@ -187,6 +187,11 @@ var API = (function() {
     // === Users ===
     getUsers: function(pin) {
       return apiGet('getUsers', { pin: pin });
+    },
+    
+    // === Sewer Packs ===
+    getSewerPacks: function(pin) {
+      return apiGet('getSewerPacks', { pin: pin });
     },
     
     addUser: function(name, newPin, role, adminPin) {

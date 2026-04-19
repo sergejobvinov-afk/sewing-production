@@ -791,6 +791,17 @@ var QRGen=(function(){
       <div class="loading" id="users-loading"><div class="spinner"></div><div>Загрузка...</div></div>
     </div>
 
+    <!-- ===== SEWER PACKS SCREEN (мои пачки) ===== -->
+    <div class="screen" id="screen-sewer-packs">
+      <div class="card" style="padding:12px;">
+        <h3 style="margin-bottom:12px;">🧵 Мои пачки</h3>
+        <div id="sewer-packs-list"></div>
+        </div>
+        <div class="loading" id="sewer-packs-loading"><div class="spinner"></div><div>Загрузка...</div></div>
+        <button class="action-btn btn-secondary" onclick="openSewerPacks()" style="margin-top:8px;">🔄 Обновить</button>
+        <button class="action-btn btn-secondary" onclick="goHome()">🏠 На главную</button>
+    </div>
+
   </div><!-- /container -->
   
   <!-- API wrapper for Google Apps Script backend -->
@@ -880,7 +891,7 @@ var QRGen=(function(){
         btns += menuBtn('btn-packlist', '📋', 'База паспортов', 'Все пачки + печать QR', 'openPackList()');
       }
       if (role === 'sewer') {
-        btns += menuBtn('btn-status', '🔍', 'Мои пачки', 'Статус моих пачек', 'openStatusCheck()');
+        btns += menuBtn('btn-status', '🧵', 'Мои пачки', 'Список выданных и принятых пачек', 'openSewerPacks()');
       }
       if (role === 'admin' || role === 'accountant') {
         btns += menuBtn('btn-dashboard', '📊', 'Дашборд', 'Финансы, производство, швеи', 'openDashboard()');
@@ -1426,6 +1437,58 @@ function onQrScanned(target, rawQr){
       showScreen('users','👥 Пользователи','Управление');
       loadUsersList();
     }
+    function openSewerPacks() {
+  showScreen('sewer-packs', '🧵 Мои пачки', 'Выданные и принятые');
+  showLoading('sewer-packs', true);
+  API.getSewerPacks(currentUser.pin)
+    .then(function(r) {
+      showLoading('sewer-packs', false);
+      if (r && r.success) {
+        renderSewerPacks(r.packs);
+      } else {
+        document.getElementById('sewer-packs-list').innerHTML = '<div class="result-card error"><div class="result-icon">❌</div><div>' + (r ? r.message : 'Ошибка загрузки') + '</div></div>';
+      }
+    })
+    .catch(function(e) {
+      showLoading('sewer-packs', false);
+      document.getElementById('sewer-packs-list').innerHTML = '<div class="result-card error"><div class="result-icon">❌</div><div>Ошибка: ' + e.message + '</div></div>';
+    });
+}
+
+function renderSewerPacks(packs) {
+  if (!packs || packs.length === 0) {
+    document.getElementById('sewer-packs-list').innerHTML = '<div style="text-align:center;padding:20px;color:#999;">Нет пачек</div>';
+    return;
+  }
+  
+  var html = '<div style="display:flex;flex-direction:column;gap:12px;">';
+  packs.forEach(function(p) {
+    var statusColor = p.status === 'Выдано' ? '#2196f3' : '#4caf50';
+    var statusText = p.status === 'Выдано' ? 'В пошиве' : 'Принято ОТК';
+    html += '<div class="card" style="margin-bottom:0;">';
+    html += '<div style="font-weight:700;font-size:16px;">📦 ' + escapeHtml(p.id) + '</div>';
+    html += '<div style="font-size:13px;color:#666;">Модель: ' + escapeHtml(p.model) + ' | Размер: ' + escapeHtml(p.size) + ' | Цвет: ' + escapeHtml(p.color || '—') + '</div>';
+    html += '<div style="font-size:13px;color:#666;">Кол-во: ' + p.qty + ' шт.</div>';
+    if (p.passport) html += '<div style="font-size:13px;color:#666;">Паспорт: ' + escapeHtml(p.passport) + '</div>';
+    html += '<div style="margin-top:6px;"><span style="background:' + statusColor + '22;color:' + statusColor + ';padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600;">' + statusText + '</span></div>';
+    if (p.status === 'Выдано') {
+      html += '<div style="font-size:12px;color:#888;margin-top:4px;">Выдана: ' + formatDate(p.issuedDate) + '</div>';
+    } else {
+      html += '<div style="font-size:12px;color:#888;margin-top:4px;">Принято: ' + p.otkQty + ' из ' + p.qty + ' шт.</div>';
+      html += '<div style="font-size:12px;color:#888;">Дата приёмки: ' + formatDate(p.acceptedDate) + '</div>';
+    }
+    html += '<button class="action-btn btn-secondary" style="margin-top:8px;padding:8px;" onclick="checkStatus(\'' + escapeHtml(p.id) + '\')">🔍 Подробнее</button>';
+    html += '</div>';
+  });
+  html += '</div>';
+  document.getElementById('sewer-packs-list').innerHTML = html;
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr);
+  return d.toLocaleDateString('ru-RU') + ' ' + d.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+}
     function loadUsersList(){
       showLoading('users',true);
       API.getUsers(currentUser.pin)
