@@ -5,7 +5,7 @@
 
 var API = (function() {
   // ⚠️ ЗАМЕНИТЕ НА URL ВАШЕГО РАЗВЕРНУТОГО СКРИПТА
-  var BASE_URL = 'https://script.google.com/macros/s/AKfycbxvE2AKaiDwMGK5NqKdrFcK0fSXBSH50njQAL7HKUvn2rrVfdL-4rXctyozVn5m_ohi/exec';
+  var BASE_URL = 'https://script.google.com/macros/s/AKfycbwqNxJH6mb1FYo5p0eL1aaoQOY4U0H26HjJx-VpLb4MD_VOy-A2BKYOY-OAdp5axL5I/exec';
   
   // Индикатор статуса API
   var _statusEl = null;
@@ -150,14 +150,19 @@ var API = (function() {
       return apiGet('getSewerList', { pin: pin });
     },
     
-    // === Issue (assign) ===
-    scanAssign: function(qr, sewerName, pin) {
-      return apiPost('scanAssign', { qr: qr, sewerName: sewerName, pin: pin });
+    // Получить операции модели
+    getModelOperations: function(model) {
+      return apiGet('getModelOperations', { model: model });
     },
-    
-    // === Accept (finish) ===
-    scanFinish: function(qr, otkQty, pin) {
-      return apiPost('scanFinish', { qr: qr, otkQty: otkQty, pin: pin });
+
+    // Выдать пачку с распределением операций (заменяет старый scanAssign)
+    scanAssign: function(qr, operationsData, pin) {
+      return apiPost('scanAssign', { qr: qr, operationsData: operationsData, pin: pin });
+    },
+
+    // Принять ОТК с распределением по операциям (заменяет старый scanFinish)
+    scanFinish: function(qr, acceptedByOperation, pin) {
+      return apiPost('scanFinish', { qr: qr, acceptedByOperation: acceptedByOperation, pin: pin });
     },
     
     // === Dashboard ===

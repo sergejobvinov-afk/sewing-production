@@ -773,10 +773,9 @@ var QRGen=(function(){
         <div class="qr-scanned">📦 Пачка: <span class="qr-id" id="issue-qr-display"></span></div>
         <div class="card"><h3>📋 Данные пачки</h3><div id="issue-pack-info"></div></div>
         <div class="card">
-          <h3>👩‍🔧 Выберите швею</h3>
-          <select id="issue-sewer-select"><option value="">-- Выберите --</option></select>
-          <button class="action-btn btn-success" onclick="submitIssue()" id="btn-submit-issue">✅ Выдать в пошив</button>
-        </div>
+        <h3>👩‍🔧 Распределение операций</h3>
+      <div id="issue-ops-container"></div>
+</div>
       </div>
       <div id="issue-result" style="display:none;"></div>
       <div class="loading" id="issue-loading"><div class="spinner"></div><div>Обработка...</div></div>
@@ -806,11 +805,9 @@ var QRGen=(function(){
         <div class="qr-scanned">📦 Пачка: <span class="qr-id" id="accept-qr-display"></span></div>
         <div class="card"><h3>📋 Данные пачки</h3><div id="accept-pack-info"></div></div>
         <div class="card">
-          <h3>✅ Количество принятых ОТК</h3>
-          <input type="number" id="accept-otk-qty" placeholder="Кол-во принятых" min="0" inputmode="numeric">
-          <div style="font-size:12px;color:#888;margin-top:6px;">Максимум: <span id="accept-max-qty">—</span> шт.</div>
-          <button class="action-btn btn-success" onclick="submitAccept()" id="btn-submit-accept">✅ Принять ОТК</button>
-        </div>
+  <h3>✅ Приёмка по операциям</h3>
+  <div id="accept-ops-container"></div>
+</div>
       </div>
       <div id="accept-result" style="display:none;"></div>
       <div class="loading" id="accept-loading"><div class="spinner"></div><div>Обработка...</div></div>
@@ -1007,6 +1004,112 @@ var QRGen=(function(){
       showScreen('login', 'Швейное производство', 'Система учета');
     }
 
+    // ===== Функции для работы с операциями (выдача) =====
+function renderIssueOperations(operations, packQty) {
+  var html = '<div style="margin-bottom:12px;">Количество изделий в пачке: <strong>' + packQty + '</strong> шт.</div>';
+  html += '<div id="issue-ops-list">';
+  operations.forEach(function(op, idx) {
+    html += '<div class="card" style="margin-bottom:8px;">';
+    html += '<div><strong>' + escapeHtml(op.name) + '</strong> (цена швеи: ' + op.priceSewer + ' ₽)</div>';
+    html += '<div style="margin-top:6px;">Швея: <select class="issue-sewer-select" data-op="' + idx + '">';
+    html += '<option value="">-- Выберите --</option>';
+    html += '</select></div>';
+    html += '</div>';
+  });
+  html += '</div><button class="action-btn btn-success" onclick="submitIssueWithOps()">✅ Выдать в пошив</button>';
+  document.getElementById('issue-ops-container').innerHTML = html;
+  // Загрузить список швей для селектов
+  API.getSewerList(currentUser.pin).then(function(sewers) {
+    var selects = document.querySelectorAll('#issue-ops-list .issue-sewer-select');
+    selects.forEach(function(sel) {
+      sewers.forEach(function(s) {
+        var opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        sel.appendChild(opt);
+      });
+    });
+  }).catch(function(e) { console.error(e); });
+}
+
+function submitIssueWithOps() {
+  var qr = currentQR['issue'];
+  if (!qr) { showToast('QR не найден', true); return; }
+  var selects = document.querySelectorAll('#issue-ops-list .issue-sewer-select');
+  var operationsData = [];
+  for (var i = 0; i < selects.length; i++) {
+    var sewer = selects[i].value;
+    if (!sewer) {
+      showToast('Для операции ' + (i+1) + ' не выбрана швея', true);
+      return;
+    }
+    // Название операции берём из сохранённых данных
+    var opName = packData['issue'].operations ? packData['issue'].operations[i].name : 'Операция ' + (i+1);
+    operationsData.push({ operationName: opName, sewerName: sewer });
+  }
+  showLoading('issue', true);
+  API.scanAssign(qr, operationsData, currentUser.pin)
+    .then(function(r) {
+      showLoading('issue', false);
+      if (r.success) {
+        document.getElementById('issue-sewer-area').style.display = 'none';
+        document.querySelector('#screen-issue .scan-instruction').style.display = 'none';
+        showResultCard('issue', true, r.message);
+      } else {
+        showResultCard('issue', false, r.message);
+      }
+    })
+    .catch(function(e) {
+      showLoading('issue', false);
+      showToast('Ошибка: ' + e.message, true);
+    });
+}
+
+// ===== Функции для работы с операциями (приёмка) =====
+function renderAcceptOperations(operations, packQty) {
+  var html = '<div style="margin-bottom:12px;">Общее количество: <strong>' + packQty + '</strong> шт.</div>';
+  html += '<div id="accept-ops-list">';
+  operations.forEach(function(op, idx) {
+    var remaining = op.issued - op.accepted;
+    html += '<div class="card" style="margin-bottom:8px;">';
+    html += '<div><strong>' + escapeHtml(op.name) + '</strong> (швея: ' + escapeHtml(op.sewer) + ', цена: ' + op.price + ' ₽)</div>';
+    html += '<div>Выдано: ' + op.issued + ' | Принято: ' + op.accepted + ' | Осталось: ' + remaining + '</div>';
+    html += '<div style="margin-top:6px;">Принять: <input type="number" class="accept-op-qty" data-op="' + idx + '" min="0" max="' + remaining + '" value="' + remaining + '" style="width:80px;"> шт.</div>';
+    html += '</div>';
+  });
+  html += '</div><button class="action-btn btn-success" onclick="submitAcceptWithOps()">✅ Принять ОТК</button>';
+  document.getElementById('accept-ops-container').innerHTML = html;
+}
+
+function submitAcceptWithOps() {
+  var qr = currentQR['accept'];
+  if (!qr) { showToast('QR не найден', true); return; }
+  var inputs = document.querySelectorAll('#accept-ops-list .accept-op-qty');
+  var acceptedByOperation = [];
+  for (var i = 0; i < inputs.length; i++) {
+    var qty = parseInt(inputs[i].value, 10);
+    if (isNaN(qty)) qty = 0;
+    var opName = packData['accept'].operations[i].name;
+    acceptedByOperation.push({ operationName: opName, acceptedQty: qty });
+  }
+  showLoading('accept', true);
+  API.scanFinish(qr, acceptedByOperation, currentUser.pin)
+    .then(function(r) {
+      showLoading('accept', false);
+      if (r.success) {
+        document.getElementById('accept-otk-area').style.display = 'none';
+        document.querySelector('#screen-accept .scan-instruction').style.display = 'none';
+        showResultCard('accept', true, r.message);
+      } else {
+        showResultCard('accept', false, r.message);
+      }
+    })
+    .catch(function(e) {
+      showLoading('accept', false);
+      showToast('Ошибка: ' + e.message, true);
+    });
+}
+    
     // ===== ROLE-BASED MENU =====
     function buildHomeMenu() {
       if (!currentUser) return;
@@ -1168,24 +1271,41 @@ function onQrScanned(target, rawQr){
       document.getElementById('issue-step-num').textContent='1';
       document.getElementById('issue-step-text').textContent='Отсканируйте QR-код пачки';
     }
-    function onIssueScan(qr){
-      document.getElementById('issue-scan-area').style.display='none';
-      document.getElementById('issue-step-num').textContent='2';
-      document.getElementById('issue-step-text').textContent='Выберите швею';
-      document.getElementById('issue-qr-display').textContent=qr;
-      showLoading('issue',true);
-      API.getPackStatus(qr,currentUser.pin)
-      .then(function(r){
-        showLoading('issue',false);
-        if(r&&r.success){
-          packData['issue']=r;
-          document.getElementById('issue-pack-info').innerHTML=packInfoHtml(r);
-          document.getElementById('issue-sewer-area').style.display='block';
-          loadSewerList();
-        }else{showResultCard('issue',false,r?r.message:'Ошибка');}
-      })
-      .catch(function(e){showLoading('issue',false);showToast('Ошибка: '+e.message,true);});
-    }
+    function onIssueScan(qr) {
+  document.getElementById('issue-scan-area').style.display = 'none';
+  showLoading('issue', true);
+  API.getPackStatus(qr, currentUser.pin)
+    .then(function(r) {
+      if (r && r.success) {
+        packData['issue'] = r;
+        // Загружаем операции модели
+        API.getModelOperations(r.model).then(function(ops) {
+          showLoading('issue', false);
+          if (ops && ops.length) {
+            renderIssueOperations(ops, r.qty);
+            document.getElementById('issue-step-num').textContent = '2';
+            document.getElementById('issue-step-text').textContent = 'Выберите швей для каждой операции';
+            document.getElementById('issue-qr-display').textContent = qr;
+            document.getElementById('issue-pack-info').innerHTML = packInfoHtml(r);
+            document.getElementById('issue-sewer-area').style.display = 'block';
+          } else {
+            showResultCard('issue', false, 'Для модели ' + r.model + ' не заданы операции.');
+          }
+        }).catch(function(e) {
+          showLoading('issue', false);
+          showResultCard('issue', false, 'Ошибка загрузки операций: ' + e.message);
+        });
+      } else {
+        showLoading('issue', false);
+        showResultCard('issue', false, r ? r.message : 'Ошибка');
+      }
+    })
+    .catch(function(e) {
+      showLoading('issue', false);
+      showToast('Ошибка: ' + e.message, true);
+    });
+}
+
     function loadSewerList(){
       API.getSewerList(currentUser.pin)
       .then(function(sewers){
@@ -1232,21 +1352,22 @@ function onQrScanned(target, rawQr){
     function onAcceptScan(qr) {
   document.getElementById('accept-scan-area').style.display = 'none';
   document.getElementById('accept-step-num').textContent = '2';
-  document.getElementById('accept-step-text').textContent = 'Введите количество ОТК';
+  document.getElementById('accept-step-text').textContent = 'Введите количество ОТК по операциям';
   document.getElementById('accept-qr-display').textContent = qr;
   showLoading('accept', true);
   API.getPackStatus(qr, currentUser.pin)
     .then(function(r) {
+      showLoading('accept', false);
       if (r && r.success) {
         packData['accept'] = r;
         document.getElementById('accept-pack-info').innerHTML = packInfoHtml(r);
-        document.getElementById('accept-max-qty').textContent = r.qty;
-        document.getElementById('accept-otk-qty').max = r.qty;
-        document.getElementById('accept-otk-qty').value = r.qty;
-        document.getElementById('accept-otk-area').style.display = 'block';
-        showLoading('accept', false);
+        if (r.operations && r.operations.length > 0) {
+          renderAcceptOperations(r.operations, r.qty);
+          document.getElementById('accept-otk-area').style.display = 'block';
+        } else {
+          showResultCard('accept', false, 'У пачки нет операций (не выдана).');
+        }
       } else {
-        showLoading('accept', false);
         showResultCard('accept', false, r ? r.message : 'Ошибка получения данных пачки');
       }
     })
@@ -1255,6 +1376,7 @@ function onQrScanned(target, rawQr){
       showResultCard('accept', false, 'Ошибка соединения: ' + e.message);
     });
 }
+
     function submitAccept(){
       var otkQty=document.getElementById('accept-otk-qty').value;
       if(!otkQty||isNaN(Number(otkQty))||Number(otkQty)<0){showToast('Введите количество',true);return;}
