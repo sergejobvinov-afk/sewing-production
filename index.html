@@ -562,39 +562,152 @@ var QRGen=(function(){
     }
     
     @media print {
-  body { background: white; margin: 0; padding: 0; }
-  .header, .back-btn, .container > *:not(#screen-multipassport),
-  .action-btn, .toast, .no-print { display: none !important; }
-  #screen-multipassport { display: block !important; }
+  /* Сброс отступов для печати */
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
   
-  /* Сетка для нескольких паспортов */
+  /* Скрываем все элементы, кроме контейнера с паспортами */
+  .header, .back-btn, .container > *:not(#screen-multipassport),
+  .action-btn, .toast, .no-print {
+    display: none !important;
+  }
+  
+  #screen-multipassport {
+    display: block !important;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Контейнер-сетка для 8 паспортов на листе */
   #multipassport-content {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8mm;
+    grid-template-columns: repeat(2, 100mm);
+    grid-auto-rows: 70mm;
+    gap: 1mm;                /* маленький зазор между карточками */
+    justify-content: center; /* выравнивание по центру */
     page-break-before: avoid;
   }
   
+  /* Стиль самой карточки паспорта */
   .passport-card {
+    width: 100mm;
+    height: 70mm;
     break-inside: avoid;
     page-break-inside: avoid;
     border: 1px solid #ccc;
     margin: 0;
-    box-shadow: none;
+    padding: 3mm;
+    box-sizing: border-box;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   
-  /* Если места мало — одна колонка */
-  @media (max-width: 200mm) {
-    #multipassport-content {
-      grid-template-columns: 1fr;
-    }
+  /* Заголовок паспорта – меньший шрифт */
+  .passport-header {
+    font-size: 10pt;
+    text-align: center;
+    font-weight: bold;
+    border-bottom: 1px solid #333;
+    margin-bottom: 2mm;
+    padding-bottom: 1mm;
   }
   
-  /* Ориентация и поля (опционально) */
+  /* Основная область (информация + QR) */
+  .passport-body {
+    display: flex;
+    gap: 2mm;
+    flex: 1;
+    min-height: 0;
+  }
+  
+  .passport-info {
+    flex: 1;
+    font-size: 8pt;
+  }
+  
+  .passport-row {
+    display: flex;
+    padding: 1mm 0;
+    font-size: 7pt;
+  }
+  
+  .passport-label {
+    font-weight: bold;
+    min-width: 20mm;
+  }
+  
+  .passport-qr {
+    flex-shrink: 0;
+    width: 25mm;
+    text-align: center;
+  }
+  
+  .passport-qr svg {
+    width: 22mm !important;
+    height: 22mm !important;
+  }
+  
+  .passport-id-big {
+    font-size: 8pt;
+    font-weight: bold;
+    margin-top: 2mm;
+    text-align: center;
+    word-break: break-word;
+  }
+  
+  .passport-ops {
+    margin-top: 2mm;
+    padding-top: 1mm;
+    border-top: 1px dashed #ccc;
+    font-size: 6pt;
+  }
+  
+  .passport-ops-title {
+    font-weight: bold;
+    font-size: 7pt;
+  }
+  
+  .passport-ops-list span {
+    display: inline-block;
+    background: #f0f0f0;
+    padding: 0 2mm;
+    margin: 1mm 1mm 0 0;
+    font-size: 6pt;
+    border: 0.5px solid #ccc;
+  }
+  
+  /* Настройки страницы */
   @page {
-    size: A4 portrait; /* можно landscape */
-    margin: 10mm;
+    size: A4;
+    margin: 5mm;
   }
+}
+/* Стили для экрана множественной печати (чтобы видеть сетку) */
+#screen-multipassport #multipassport-content {
+  display: grid;
+  grid-template-columns: repeat(2, 100mm);
+  grid-auto-rows: 70mm;
+  gap: 2mm;
+  justify-content: center;
+  background: #f0f0f0;
+  padding: 5mm;
+}
+
+#screen-multipassport .passport-card {
+  width: 100mm;
+  height: 70mm;
+  border: 1px solid #999;
+  background: white;
+  padding: 3mm;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
   </style>
 </head>
