@@ -936,18 +936,22 @@ function extractPackId(raw) {
 }
 
 // ===== QR SCANNER =====
-function startScanner(target) {
+async function startScanner(target) {
   var readerId = target + '-qr-reader';
   if (!document.getElementById(readerId)) return;
-  if (scanners[target]) { try{scanners[target].stop();}catch(e){} }
+  if (scanners[target]) {
+    try {
+      await scanners[target].stop();
+    } catch(e) {}
+    delete scanners[target];
+  }
   var scanner = new Html5Qrcode(readerId);
   scanners[target] = scanner;
-  scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:250},aspectRatio:1},
-    function(text){
-      scanner.stop().then(function(){
-        delete scanners[target];
-        onQrScanned(target, text);
-      });
+  await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:250},aspectRatio:1},
+    async function(text){
+      await scanner.stop();
+      delete scanners[target];
+      onQrScanned(target, text);
     },
     function(){}
   ).catch(function(err){showToast('Камера недоступна',true);switchScanMode(target,'manual');});
@@ -965,11 +969,13 @@ function tryCameraQuiet(target){
   }catch(e){}
 }
 
-function stopAllScanners(){
-  Object.keys(scanners).forEach(function(k){
-    try{scanners[k].stop();}catch(e){}
+async function stopAllScanners() {
+  var promises = [];
+  Object.keys(scanners).forEach(function(k) {
+    promises.push(scanners[k].stop().catch(function(e){}));
     delete scanners[k];
   });
+  await Promise.all(promises);
 }
 
 function switchScanMode(target,mode){
@@ -1013,7 +1019,13 @@ function onQrScanned(target, rawQr){
   else if(target==='status') checkStatus(packId);
 }
     // ===== ISSUE =====
-    function openIssue(){resetIssueScreen();showScreen('issue','📤 Выдача','Взять в пошив');switchScanMode('issue','manual');tryCameraQuiet('issue');}
+    async function openIssue() {
+  await stopAllScanners();
+  resetIssueScreen();
+  showScreen('issue','📤 Выдача','Взять в пошив');
+  switchScanMode('issue','manual');
+  tryCameraQuiet('issue');
+}
     function resetIssueScreen(){
       document.getElementById('issue-scan-area').style.display='block';
       document.getElementById('issue-sewer-area').style.display='none';
@@ -1068,7 +1080,13 @@ function onQrScanned(target, rawQr){
     }
 
     // ===== ACCEPT =====
-    function openAccept(){resetAcceptScreen();showScreen('accept','📥 Приемка','Принять ОТК');switchScanMode('accept','manual');tryCameraQuiet('accept');}
+    async function openAccept() {
+  await stopAllScanners();
+  resetAcceptScreen();
+  showScreen('accept','📥 Приемка','Принять ОТК');
+  switchScanMode('accept','manual');
+  tryCameraQuiet('accept');
+}
     function resetAcceptScreen(){
       document.getElementById('accept-scan-area').style.display='block';
       document.getElementById('accept-otk-area').style.display='none';
@@ -1120,10 +1138,14 @@ function onQrScanned(target, rawQr){
     }
 
     // ===== STATUS =====
-    function openStatusCheck(){
-      document.getElementById('status-result').style.display='none';document.getElementById('status-result').innerHTML='';
-      showScreen('status','🔍 Статус','Проверка пачки');switchScanMode('status','manual');tryCameraQuiet('status');
-    }
+    async function openStatusCheck() {
+  await stopAllScanners();
+  document.getElementById('status-result').style.display='none';
+  document.getElementById('status-result').innerHTML='';
+  showScreen('status','🔍 Статус','Проверка пачки');
+  switchScanMode('status','manual');
+  tryCameraQuiet('status');
+}
     function checkStatus(qr){
       showLoading('status',true);document.getElementById('status-result').style.display='none';
       API.getPackStatus(qr,currentUser.pin)
