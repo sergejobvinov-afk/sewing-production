@@ -5,7 +5,7 @@
 
 var API = (function() {
   // ⚠️ ЗАМЕНИТЕ НА URL ВАШЕГО РАЗВЕРНУТОГО СКРИПТА
-  var BASE_URL = 'https://script.google.com/macros/s/AKfycbz1u6zcSsQAxv6ej_ls_u7MBLCSLhPHn182vZDk5feYPycX72YcudjGTCSwK15i6Knx/exec';
+  var BASE_URL = 'https://script.google.com/macros/s/AKfycbxvE2AKaiDwMGK5NqKdrFcK0fSXBSH50njQAL7HKUvn2rrVfdL-4rXctyozVn5m_ohi/exec';
   
   // Индикатор статуса API
   var _statusEl = null;
@@ -142,8 +142,8 @@ var API = (function() {
     
     // === Pack Status ===
     getPackStatus: function(qr, pin) {
-      return apiGet('getPackStatus', { qr: qr, pin: pin });
-    },
+  return apiPost('getPackStatus', { qr: qr, pin: pin });
+},
     
     // === Sewer List ===
     getSewerList: function(pin) {
