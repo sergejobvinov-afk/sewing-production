@@ -1028,6 +1028,12 @@ function renderIssueOperations(operations, packQty) {
         opt.textContent = s;
         sel.appendChild(opt);
       });
+if (sewers.length > 0) {
+    selects.forEach(function(sel) {
+        sel.value = sewers[0]; // выбираем первую швею
+        console.log('Set select value to', sewers[0]);
+    });
+}
     });
   }).catch(function(e) { console.error(e); });
 }
@@ -1041,6 +1047,10 @@ function submitIssueWithOps() {
   }
   var selects = document.querySelectorAll('#issue-ops-list .issue-sewer-select');
   var operationsData = [];
+console.log('Selects count:', selects.length);
+for (var i = 0; i < selects.length; i++) {
+    console.log('Select', i, 'value:', selects[i].value);
+}
   for (var i = 0; i < selects.length; i++) {
     var sewer = selects[i].value;
     if (!sewer) {
