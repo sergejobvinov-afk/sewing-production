@@ -1344,21 +1344,6 @@ packData['issue'].modelOperations = ops;
     }
 
     
-    function submitIssue(){
-      var sewer=document.getElementById('issue-sewer-select').value;
-      if(!sewer){showToast('Выберите швею',true);return;}
-      var qr=currentQR['issue'];if(!qr){showToast('QR не найден',true);return;}
-      document.getElementById('btn-submit-issue').disabled=true;showLoading('issue',true);
-      API.scanAssign(qr,sewer,currentUser.pin)
-        .then(function(r){
-          showLoading('issue',false);document.getElementById('btn-submit-issue').disabled=false;
-          document.getElementById('issue-sewer-area').style.display='none';
-          document.querySelector('#screen-issue .scan-instruction').style.display='none';
-          showResultCard('issue',r.success,r.message);
-        })
-        .catch(function(e){showLoading('issue',false);document.getElementById('btn-submit-issue').disabled=false;showToast('Ошибка: '+e.message,true);});
-    }
-
     // ===== ACCEPT =====
     async function openAccept() {
   await stopAllScanners();
