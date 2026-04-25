@@ -5,7 +5,7 @@
 
 var API = (function() {
   // ⚠️ ЗАМЕНИТЕ НА URL ВАШЕГО РАЗВЕРНУТОГО СКРИПТА
-  var BASE_URL = 'https://script.google.com/macros/s/AKfycbwqNxJH6mb1FYo5p0eL1aaoQOY4U0H26HjJx-VpLb4MD_VOy-A2BKYOY-OAdp5axL5I/exec';
+  var BASE_URL = 'https://script.google.com/macros/s/AKfycbyMxe_92DrCu-HUzJ-LDqn-Xf8MfnsUhbdiT80IVRMeIp4qOKKSOvYZNy3zGuioPZx7/exec';
   
   // Индикатор статуса API
   var _statusEl = null;
