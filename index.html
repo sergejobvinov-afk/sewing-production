@@ -1198,6 +1198,13 @@ function extractPackId(raw) {
 }
 
 // ===== QR SCANNER =====
+function clearScannerContainer(target) {
+  var readerId = target + '-qr-reader';
+  var el = document.getElementById(readerId);
+  if (el) {
+    el.innerHTML = '';  // убираем старый video/canvas
+  }
+}
 async function startScanner(target) {
   var readerId = target + '-qr-reader';
   if (!document.getElementById(readerId)) return;
@@ -1207,6 +1214,7 @@ async function startScanner(target) {
     } catch(e) {}
     delete scanners[target];
   }
+  clearScannerContainer(target);
   var scanner = new Html5Qrcode(readerId);
   scanners[target] = scanner;
   await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:250,height:250},aspectRatio:1},
@@ -1234,12 +1242,15 @@ function tryCameraQuiet(target){
 async function stopAllScanners() {
   var promises = [];
   Object.keys(scanners).forEach(function(k) {
-    promises.push(scanners[k].stop().catch(function(e){}));
-    delete scanners[k];
+    promises.push(
+      scanners[k].stop()
+        .then(() => { delete scanners[k]; })
+        .catch(function(e) { delete scanners[k]; })  // даже при ошибке удаляем
+    );
   });
   await Promise.all(promises);
+  scanners = {};  // полная очистка
 }
-
 function switchScanMode(target,mode){
   var cam=document.getElementById(target+'-camera-area'),man=document.getElementById(target+'-manual-area');
   var tabs=document.querySelectorAll('#screen-'+target+' .scan-tab');
@@ -1281,8 +1292,10 @@ function onQrScanned(target, rawQr){
   else if(target==='status') checkStatus(packId);
 }
     // ===== ISSUE =====
-    async function openIssue() {
+   async function openIssue() {
   await stopAllScanners();
+  // Даём iOS время освободить камеру
+  await new Promise(r => setTimeout(r, 400));
   resetIssueScreen();
   showScreen('issue','📤 Выдача','Взять в пошив');
   switchScanMode('issue','manual');
@@ -1347,6 +1360,7 @@ packData['issue'].modelOperations = ops;
     // ===== ACCEPT =====
     async function openAccept() {
   await stopAllScanners();
+  await new Promise(r => setTimeout(r, 400));
   resetAcceptScreen();
   showScreen('accept','📥 Приемка','Принять ОТК');
   switchScanMode('accept','manual');
