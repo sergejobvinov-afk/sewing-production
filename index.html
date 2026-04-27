@@ -1459,45 +1459,47 @@ function onQrScanned(target, rawQr){
   tryCameraQuiet('status');
 }
     function checkStatus(qr){
-      showLoading('status',true);document.getElementById('status-result').style.display='none';
-      API.getPackStatus(qr,currentUser.pin)
-      .then(function(r){
-        showLoading('status',false);
-        if(r&&r.success){
-          var h='<div class="card"><h3>📦 '+r.id+'</h3>';
-          h+=cardRow('Модель',r.model)+cardRow('Размер',r.size)+cardRow('Цвет',r.color||'—');
-          h+=cardRow('Кол-во',r.qty+' шт.')+cardRow('Дата кроя',r.dateCut)+cardRow('Паспорт',r.passport);
-          var sc=r.status==='Новая'?'#ff9800':(r.status==='Выдано'?'#2196f3':'#4caf50');
-          h+=cardRow('Статус','<span style="color:'+sc+'">'+r.status+'</span>');
-          h+='</div>';
-          if(r.scans&&r.scans.length>0){
-            h+='<div class="card"><h3>📜 История</h3>';
-            r.scans.forEach(function(s){
-              h+='<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;">';
-              h+='<div style="font-weight:600;color:#667eea;">'+s.stage+'</div>';
-              h+='<div style="font-size:12px;color:#888;">'+s.time+'</div>';
-              if(s.sewer)h+='<div style="font-size:13px;">Швея: '+s.sewer+'</div>';
-              if(s.otk)h+='<div style="font-size:13px;">ОТК: '+s.otk+' шт.</div>';
-              // Финансы только для admin/accountant (backend уже фильтрует)
-              if(s.zp)h+='<div style="font-size:13px;">ЗП: '+s.zp+' ₽</div>';
-              if(s.revenue)h+='<div style="font-size:13px;">Выручка: '+s.revenue+' ₽</div>';
-              if(s.profit)h+='<div style="font-size:13px;">Прибыль: '+s.profit+' ₽</div>';
-              h+='</div>';
-            });
-            h+='</div>';
-          }
-          // Кнопка печати паспорта (admin, master)
-          if(currentUser && (currentUser.role==='admin'||currentUser.role==='master')){
-            h+='<button class="action-btn btn-orange" onclick="printPassport(\''+r.id+'\')">🖨️ Печать паспорта</button>';
-          }
-          document.getElementById('status-result').innerHTML=h;
-          document.getElementById('status-result').style.display='block';
-        }else{showResultCard('status',false,r?r.message:'Ошибка');}
-      })
-      .catch(function(e){showLoading('status',false);showResultCard('status',false,'Ошибка: '+e.message);
-      });
-    }
+  showLoading('status',true);document.getElementById('status-result').style.display='none';
+  API.getPackStatus(qr,currentUser.pin)
+  .then(function(r){
+    showLoading('status',false);
+    if(r&&r.success){
+      var h='<div class="card"><h3>📦 '+r.id+'</h3>';
+      h+=cardRow('Модель',r.model)+cardRow('Размер',r.size)+cardRow('Цвет',r.color||'—');
+      h+=cardRow('Кол-во',r.qty+' шт.')+cardRow('Дата кроя',r.dateCut)+cardRow('Паспорт',r.passport);
+      var sc=r.status==='Новая'?'#ff9800':(r.status==='Выдано'?'#2196f3':'#4caf50');
+      h+=cardRow('Статус','<span style="color:'+sc+'">'+r.status+'</span>');
+      h+='</div>';
 
+      // Показываем операции
+      if(r.operations && r.operations.length > 0){
+        h+='<div class="card"><h3>📜 Операции</h3>';
+        r.operations.forEach(function(op){
+          h+='<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;">';
+          h+='<div style="font-weight:600;color:#667eea;">'+op.name+'</div>';
+          if(op.sewer) h+='<div style="font-size:13px;">👩‍🔧 Швея: '+op.sewer+'</div>';
+          h+='<div style="font-size:13px;">Выдано: '+op.issued+' | Принято: '+op.accepted+'</div>';
+          if(op.issuedDate) h+='<div style="font-size:12px;color:#888;">Выдана: '+op.issuedDate+'</div>';
+          if(op.acceptedDate) h+='<div style="font-size:12px;color:#888;">Принята: '+op.acceptedDate+'</div>';
+          // Цену видит только не мастер
+          if(currentUser && currentUser.role !== 'master'){
+            if(op.price) h+='<div style="font-size:13px;">Цена швеи: '+op.price+' ₽</div>';
+          }
+          h+='</div>';
+        });
+        h+='</div>';
+      }
+
+      // Кнопка печати (admin, master)
+      if(currentUser && (currentUser.role==='admin'||currentUser.role==='master')){
+        h+='<button class="action-btn btn-orange" onclick="printPassport(\''+r.id+'\')">🖨️ Печать паспорта</button>';
+      }
+      document.getElementById('status-result').innerHTML=h;
+      document.getElementById('status-result').style.display='block';
+    }else{showResultCard('status',false,r?r.message:'Ошибка');}
+  })
+  .catch(function(e){showLoading('status',false);showResultCard('status',false,'Ошибка: '+e.message);});
+}
     // ===== DASHBOARD =====
     function openDashboard(){
       showScreen('dashboard','📊 Дашборд','Аналитика');showLoading('dashboard',true);
