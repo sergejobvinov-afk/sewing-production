@@ -1006,6 +1006,10 @@ var QRGen=(function(){
 
     // ===== Функции для работы с операциями (выдача) =====
 function renderIssueOperations(operations, packQty) {
+  if (!Array.isArray(operations) || operations.length === 0) {
+    showResultCard('issue', false, 'Нет операций для отображения.');
+    return;
+  }
   var html = '<div style="margin-bottom:12px;">Количество изделий в пачке: <strong>' + packQty + '</strong> шт.</div>';
   html += '<div id="issue-ops-list">';
   operations.forEach(function(op, idx) {
@@ -1335,11 +1339,19 @@ function onQrScanned(target, rawQr){
     .then(function(r) {
       if (r && r.success) {
         packData['issue'] = r;
+        // Проверяем, что модель определена
+        if (!r.model) {
+          showLoading('issue', false);
+          showResultCard('issue', false, 'Ошибка: не удалось определить модель пачки.');
+          return;
+        }
         // Загружаем операции модели
         API.getModelOperations(r.model).then(function(ops) {
-packData['issue'].modelOperations = ops;
+          // Гарантируем, что ops — массив
+          ops = Array.isArray(ops) ? ops : [];
+          packData['issue'].modelOperations = ops;
           showLoading('issue', false);
-          if (ops && ops.length) {
+          if (ops.length) {
             renderIssueOperations(ops, r.qty);
             document.getElementById('issue-step-num').textContent = '2';
             document.getElementById('issue-step-text').textContent = 'Выберите швей для каждой операции';
