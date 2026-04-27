@@ -1207,7 +1207,8 @@ function clearScannerContainer(target) {
 }
 async function startScanner(target) {
   var readerId = target + '-qr-reader';
-  if (!document.getElementById(readerId)) return;
+  var el = document.getElementById(readerId);
+  if (el) el.innerHTML = '';
   if (scanners[target]) {
     try {
       await scanners[target].stop();
@@ -1239,17 +1240,33 @@ function tryCameraQuiet(target){
   }catch(e){}
 }
 
+function stopAllCameraStreams() {
+  // Останавливаем все активные медиа-потоки на странице
+  var videos = document.querySelectorAll('video');
+  videos.forEach(function(video) {
+    if (video.srcObject) {
+      video.srcObject.getTracks().forEach(function(track) { track.stop(); });
+      video.srcObject = null;
+      video.remove();   // убираем элемент из DOM (опционально)
+    }
+  });
+}
+
 async function stopAllScanners() {
-  var promises = [];
-  Object.keys(scanners).forEach(function(k) {
-    promises.push(
-      scanners[k].stop()
-        .then(() => { delete scanners[k]; })
-        .catch(function(e) { delete scanners[k]; })  // даже при ошибке удаляем
-    );
+  // Сначала физически останавливаем все видеопотоки
+  stopAllCameraStreams();
+
+  var promises = Object.keys(scanners).map(function(k) {
+    var s = scanners[k];
+    return s.stop()
+      .then(() => { delete scanners[k]; })
+      .catch(function(err) {
+        console.warn('Scanner stop error (non-critical):', err);
+        delete scanners[k];   // всё равно удаляем, раз уже не работает
+      });
   });
   await Promise.all(promises);
-  scanners = {};  // полная очистка
+  scanners = {};
 }
 function switchScanMode(target,mode){
   var cam=document.getElementById(target+'-camera-area'),man=document.getElementById(target+'-manual-area');
@@ -1294,8 +1311,7 @@ function onQrScanned(target, rawQr){
     // ===== ISSUE =====
    async function openIssue() {
   await stopAllScanners();
-  // Даём iOS время освободить камеру
-  await new Promise(r => setTimeout(r, 400));
+  await new Promise(r => setTimeout(r, 600));   // iOS нужно больше времени
   resetIssueScreen();
   showScreen('issue','📤 Выдача','Взять в пошив');
   switchScanMode('issue','manual');
@@ -1360,7 +1376,7 @@ packData['issue'].modelOperations = ops;
     // ===== ACCEPT =====
     async function openAccept() {
   await stopAllScanners();
-  await new Promise(r => setTimeout(r, 400));
+  await new Promise(r => setTimeout(r, 600));
   resetAcceptScreen();
   showScreen('accept','📥 Приемка','Принять ОТК');
   switchScanMode('accept','manual');
