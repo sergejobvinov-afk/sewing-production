@@ -1010,7 +1010,9 @@ function renderIssueOperations(operations, packQty) {
   html += '<div id="issue-ops-list">';
   operations.forEach(function(op, idx) {
     html += '<div class="card" style="margin-bottom:8px;">';
-    html += '<div><strong>' + escapeHtml(op.name) + '</strong> (цена швеи: ' + op.priceSewer + ' ₽)</div>';
+    html += '<div><strong>' + escapeHtml(op.name) + '</strong>' +
+(currentUser && currentUser.role === 'master' ? '' : ' (цена швеи: ' + (op.priceSewer || op.price) + ' ₽)') +
+'</div>';
     html += '<div style="margin-top:6px;">Швея: <select class="issue-sewer-select" data-op="' + idx + '">';
     html += '<option value="">-- Выберите --</option>';
     html += '</select></div>';
@@ -1097,7 +1099,9 @@ function renderAcceptOperations(operations, packQty) {
   operations.forEach(function(op, idx) {
     var remaining = op.issued - op.accepted;
     html += '<div class="card" style="margin-bottom:8px;">';
-    html += '<div><strong>' + escapeHtml(op.name) + '</strong> (швея: ' + escapeHtml(op.sewer) + ', цена: ' + op.price + ' ₽)</div>';
+    html += '<div><strong>' + escapeHtml(op.name) + '</strong>' +
+(currentUser && currentUser.role === 'master' ? '' : ' (цена швеи: ' + (op.priceSewer || op.price) + ' ₽)') +
+'</div>';
     html += '<div>Выдано: ' + op.issued + ' | Принято: ' + op.accepted + ' | Осталось: ' + remaining + '</div>';
     html += '<div style="margin-top:6px;">Принять: <input type="number" class="accept-op-qty" data-op="' + idx + '" min="0" max="' + remaining + '" value="' + remaining + '" style="width:80px;"> шт.</div>';
     html += '</div>';
