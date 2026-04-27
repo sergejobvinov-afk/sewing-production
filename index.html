@@ -1208,7 +1208,6 @@ function clearScannerContainer(target) {
 async function startScanner(target) {
   var readerId = target + '-qr-reader';
   var el = document.getElementById(readerId);
-  if (el) el.innerHTML = '';
   if (scanners[target]) {
     try {
       await scanners[target].stop();
@@ -1240,33 +1239,33 @@ function tryCameraQuiet(target){
   }catch(e){}
 }
 
-function stopAllCameraStreams() {
-  // Останавливаем все активные медиа-потоки на странице
+async function stopAllScanners() {
+  // Сначала аккуратно останавливаем все сканеры (они сами удалят свои DOM-элементы)
+  for (var k in scanners) {
+    try {
+      await scanners[k].stop();
+    } catch (e) {
+      console.warn('Ошибка при остановке сканера ' + k, e);
+    }
+    delete scanners[k];
+  }
+
+  // Только теперь подчищаем контейнеры (на случай, если что-то осталось)
+  var readerIds = ['issue-qr-reader', 'accept-qr-reader', 'status-qr-reader'];
+  for (var i = 0; i < readerIds.length; i++) {
+    var el = document.getElementById(readerIds[i]);
+    if (el) el.innerHTML = '';
+  }
+
+  // И в конце останавливаем все оставшиеся видеопотоки
   var videos = document.querySelectorAll('video');
   videos.forEach(function(video) {
     if (video.srcObject) {
-      video.srcObject.getTracks().forEach(function(track) { track.stop(); });
+      video.srcObject.getTracks().forEach(t => t.stop());
       video.srcObject = null;
-      video.remove();   // убираем элемент из DOM (опционально)
+      video.remove();
     }
   });
-}
-
-async function stopAllScanners() {
-  // Сначала физически останавливаем все видеопотоки
-  stopAllCameraStreams();
-
-  var promises = Object.keys(scanners).map(function(k) {
-    var s = scanners[k];
-    return s.stop()
-      .then(() => { delete scanners[k]; })
-      .catch(function(err) {
-        console.warn('Scanner stop error (non-critical):', err);
-        delete scanners[k];   // всё равно удаляем, раз уже не работает
-      });
-  });
-  await Promise.all(promises);
-  scanners = {};
 }
 function switchScanMode(target,mode){
   var cam=document.getElementById(target+'-camera-area'),man=document.getElementById(target+'-manual-area');
@@ -1311,7 +1310,7 @@ function onQrScanned(target, rawQr){
     // ===== ISSUE =====
    async function openIssue() {
   await stopAllScanners();
-  await new Promise(r => setTimeout(r, 600));   // iOS нужно больше времени
+  await new Promise(r => setTimeout(r, 600));
   resetIssueScreen();
   showScreen('issue','📤 Выдача','Взять в пошив');
   switchScanMode('issue','manual');
