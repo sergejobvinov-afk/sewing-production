@@ -1501,38 +1501,47 @@ function onQrScanned(target, rawQr){
   .catch(function(e){showLoading('status',false);showResultCard('status',false,'Ошибка: '+e.message);});
 }
     // ===== DASHBOARD =====
-    function openDashboard(){
-      showScreen('dashboard','📊 Дашборд','Аналитика');showLoading('dashboard',true);
-      document.getElementById('dashboard-content').innerHTML='';
-      API.getDashboardData(currentUser.pin)
-      .then(function(d){
-        showLoading('dashboard',false);
-        if(!d||!d.success){document.getElementById('dashboard-content').innerHTML='<div class="result-card error"><div class="result-icon">❌</div><div>'+((d&&d.message)||'Нет доступа')+'</div></div>';return;}
-        var h='';
-        h+='<div class="dash-section"><h3>💰 Финансы</h3><div class="dash-grid">';
-        h+=dashItem(formatNum(d.finance.revenue)+' ₽','Выручка','');
-        h+=dashItem(formatNum(d.finance.zp)+' ₽','ЗП швей','');
-        h+=dashItem(formatNum(d.finance.profit)+' ₽','Прибыль','profit');
-        h+=dashItem(d.finance.margin+'%','Маржа','');
-        h+='</div></div>';
-        h+='<div class="dash-section"><h3>🏭 Производство</h3><div class="dash-grid">';
-        h+=dashItem(d.production.issued,'Выдано','');
-        h+=dashItem(d.production.accepted,'Принято','');
-        h+=dashItem(d.production.totalOtk,'Изделий ОТК','');
-        h+=dashItem(d.production.defect,'Брак',d.production.defect>0?'loss':'');
-        h+='</div></div>';
-        var sk=Object.keys(d.sewers);
-        if(sk.length>0){
-          h+='<div class="dash-section"><h3>👩‍🔧 Швеи</h3>';
-          sk.sort(function(a,b){return d.sewers[b].zp-d.sewers[a].zp;});
-          sk.forEach(function(n){var s=d.sewers[n];h+='<div class="sewer-row"><div class="sewer-name">'+n+'</div><div class="sewer-stats"><div class="zp">'+formatNum(s.zp)+' ₽</div><div>'+s.items+' шт.</div></div></div>';});
-          h+='</div>';
-        }
-        document.getElementById('dashboard-content').innerHTML=h;
-      })
-      .catch(function(e){showLoading('dashboard',false);document.getElementById('dashboard-content').innerHTML='<div class="result-card error"><div class="result-icon">❌</div><div>Ошибка: '+e.message+'</div></div>';
-      });
+    // В index.html, функция openDashboard (заменить содержимое)
+function openDashboard(){
+  showScreen('dashboard','📊 Дашборд','Аналитика');showLoading('dashboard',true);
+  document.getElementById('dashboard-content').innerHTML='';
+  API.getDashboardData(currentUser.pin)
+  .then(function(d){
+    showLoading('dashboard',false);
+    if(!d||!d.success){document.getElementById('dashboard-content').innerHTML='<div class="result-card error"><div class="result-icon">❌</div><div>'+((d&&d.message)||'Нет доступа')+'</div></div>';return;}
+    var h='';
+    h+='<div class="dash-section"><h3>💰 Финансы</h3><div class="dash-grid">';
+    h+=dashItem(formatNum(d.finance.revenue)+' ₽','Выручка','');
+    h+=dashItem(formatNum(d.finance.zp)+' ₽','ЗП швей','');
+    h+=dashItem(formatNum(d.finance.profit)+' ₽','Прибыль','profit');
+    h+=dashItem(d.finance.margin+'%','Маржа','');
+    h+='</div></div>';
+
+    h+='<div class="dash-section"><h3>📦 Пачки</h3><div class="dash-grid">';
+    h+=dashItem(d.production.issuedPacks,'Выдано','');
+    h+=dashItem(d.production.inProgressPacks,'В пошиве','');
+    h+=dashItem(d.production.acceptedPacks,'Принято','');
+    h+='</div></div>';
+
+    h+='<div class="dash-section"><h3>👕 Изделия</h3><div class="dash-grid">';
+    h+=dashItem(d.production.totalQty,'Выдано всего','');
+    h+=dashItem(d.production.inProgressQty,'В пошиве','');
+    h+=dashItem(d.production.totalOtk,'Принято ОТК','');
+    h+=dashItem(d.production.defect,'Брак',d.production.defect>0?'loss':'');
+    h+='</div></div>';
+
+    var sk=Object.keys(d.sewers);
+    if(sk.length>0){
+      h+='<div class="dash-section"><h3>👩‍🔧 Швеи</h3>';
+      sk.sort(function(a,b){return d.sewers[b].zp-d.sewers[a].zp;});
+      sk.forEach(function(n){var s=d.sewers[n];h+='<div class="sewer-row"><div class="sewer-name">'+n+'</div><div class="sewer-stats"><div class="zp">'+formatNum(s.zp)+' ₽</div><div>'+s.items+' шт.</div></div></div>';});
+      h+='</div>';
     }
+    document.getElementById('dashboard-content').innerHTML=h;
+  })
+  .catch(function(e){showLoading('dashboard',false);document.getElementById('dashboard-content').innerHTML='<div class="result-card error"><div class="result-icon">❌</div><div>Ошибка: '+e.message+'</div></div>';
+  });
+}
 
     // ===== ADD PACK =====
     function openAddPack(){
