@@ -1125,7 +1125,7 @@ function submitAcceptWithOps() {
   if (!qr) { showToast('QR не найден', true); return; }
   var inputs = document.querySelectorAll('#accept-ops-list .accept-op-qty');
   var acceptedByOperation = [];
-  var totalAccepted = 0;
+  var acceptedItems = 0;
   for (var i = 0; i < inputs.length; i++) {
     var qty = parseInt(inputs[i].value, 10);
     var maxQty = parseInt(inputs[i].max, 10);
@@ -1138,11 +1138,11 @@ function submitAcceptWithOps() {
       var operationIndex = parseInt(inputs[i].getAttribute('data-op'), 10);
       var opName = packData['accept'].operations[operationIndex].name;
       acceptedByOperation.push({ operationName: opName, acceptedQty: qty });
+      acceptedItems = Math.max(acceptedItems, qty);
     }
-    totalAccepted += qty;
   }
-  if (totalAccepted === 0) { showToast('Укажите количество для приёмки', true); return; }
-  if (!window.confirm('Подтвердить приёмку ОТК: ' + totalAccepted + ' шт.?')) return;
+  if (acceptedByOperation.length === 0) { showToast('Укажите количество для приёмки', true); return; }
+  if (!window.confirm('Подтвердить приёмку ОТК: до ' + acceptedItems + ' шт. по ' + acceptedByOperation.length + ' оп.?')) return;
   var submitButton = document.getElementById('btn-submit-accept-ops');
   if (submitButton) submitButton.disabled = true;
   showLoading('accept', true);
