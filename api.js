@@ -4,13 +4,18 @@
 // ============================================================
 
 var API = (function() {
-  var REQUEST_TIMEOUT_MS = 15000;
+  // Google Apps Script может запускаться после простоя 20–40 секунд.
+  // Короткий тайм-аут давал ложную ошибку «сервер недоступен».
+  var REQUEST_TIMEOUT_MS = 60000;
+  var WRITE_TIMEOUT_MS = 90000;
+  var HEALTH_TIMEOUT_MS = 45000;
   // ⚠️ ЗАМЕНИТЕ НА URL ВАШЕГО РАЗВЕРНУТОГО СКРИПТА
   var BASE_URL = 'https://script.google.com/macros/s/AKfycbzyrZKSHkT_KDaJ8qEx9yrj1Qn4gaKO2CJMi94x8ErlQ6QwM9xqPrtUdNREZZsDO7s/exec';
   
   // Индикатор статуса API
   var _statusEl = null;
   var _online = null; // null = unknown, true = online, false = offline
+  var _healthCheckInFlight = null;
   
   function setBaseUrl(url) {
     var parsed = new URL(url);
@@ -53,13 +58,16 @@ var API = (function() {
   }
   
   function checkConnection() {
+    if (_healthCheckInFlight) return _healthCheckInFlight;
     if (_statusEl) {
       _statusEl.style.background = '#ffc107';
       _statusEl.title = 'API: проверка...';
     }
-    apiGet('ping', {})
+    _healthCheckInFlight = apiGet('ping', {}, HEALTH_TIMEOUT_MS)
       .then(function(r) { updateStatus(r && r.success); })
-      .catch(function() { updateStatus(false); });
+      .catch(function() { updateStatus(false); })
+      .finally(function() { _healthCheckInFlight = null; });
+    return _healthCheckInFlight;
   }
 
   function fetchWithTimeout(url, options, timeoutMs) {
@@ -114,7 +122,7 @@ var API = (function() {
   // ============================================================
   // POST-запрос (для записи данных)
   // ============================================================
-  function apiPost(action, body) {
+  function apiPost(action, body, timeoutMs) {
     var payload = Object.assign({}, body, { action: action });
     
     return fetchWithTimeout(getBaseUrl(), {
@@ -122,7 +130,7 @@ var API = (function() {
       redirect: 'follow',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(payload)
-    })
+    }, timeoutMs || WRITE_TIMEOUT_MS)
     .then(function(resp) {
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       return resp.json();
@@ -150,7 +158,7 @@ var API = (function() {
     
     // === Auth ===
     login: function(pin) {
-      return apiGet('login', { pin: pin });
+      return apiGet('login', { pin: pin }, REQUEST_TIMEOUT_MS);
     },
     
     // === Pack Status ===
