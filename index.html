@@ -870,6 +870,14 @@ var QRGen=(function(){
           <h3 style="margin:0;">📋 База паспортов</h3>
           <button class="action-btn btn-orange" onclick="printSelectedPassports()" id="btn-print-selected" style="margin:0;padding:6px 14px;font-size:13px;display:none;">🖨️ Печать выбранных</button>
         </div>
+        <div style="background:#f0f3ff;border-radius:10px;padding:10px;margin-bottom:12px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:6px;">⚡ Паспорта из листа «База_Пачек»</div>
+          <div style="font-size:12px;color:#666;margin-bottom:8px;">Заполните строки в таблице, выберите дату кроя — паспорта и QR сформируются автоматически.</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="date" id="packlist-cut-date" style="flex:1;min-width:145px;margin:0;">
+            <button class="action-btn btn-primary" onclick="printPassportsByCutDate()" style="margin:0;padding:9px 12px;font-size:13px;">Сформировать паспорта</button>
+          </div>
+        </div>
         <div style="display:flex;gap:8px;margin-bottom:12px;">
           <input type="text" id="packlist-search" placeholder="🔍 Поиск по ID, модели, цвету..." oninput="filterPackList()" style="flex:1;margin:0;">
           <label style="display:flex;align-items:center;gap:4px;font-size:13px;white-space:nowrap;cursor:pointer;">
@@ -1615,6 +1623,12 @@ function openDashboard(){
       document.getElementById('packlist-search').value='';
       document.getElementById('packlist-select-all').checked=false;
       document.getElementById('btn-print-selected').style.display='none';
+      var cutDateInput=document.getElementById('packlist-cut-date');
+      if(cutDateInput&&!cutDateInput.value){
+        var now=new Date();
+        var localDate=new Date(now.getTime()-now.getTimezoneOffset()*60000).toISOString().slice(0,10);
+        cutDateInput.value=localDate;
+      }
       showLoading('packlist',true);
       API.getAllPacks(currentUser.pin)
       .then(function(r){
@@ -1699,7 +1713,37 @@ function openDashboard(){
         var idx=parseInt(cb.getAttribute('data-idx'));
         selectedPacks.push(allPacksCache[idx]);
       });
-      
+
+      renderMultiplePassports(selectedPacks);
+    }
+
+    function normalizePackDate(value){
+      if(!value)return '';
+      var match=String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if(match)return match[1]+'-'+match[2]+'-'+match[3];
+      var ruMatch=String(value).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+      if(ruMatch)return ruMatch[3]+'-'+String(ruMatch[2]).padStart(2,'0')+'-'+String(ruMatch[1]).padStart(2,'0');
+      return '';
+    }
+
+    function printPassportsByCutDate(){
+      var cutDate=document.getElementById('packlist-cut-date').value;
+      if(!cutDate){showToast('Выберите дату кроя',true);return;}
+      showLoading('packlist',true);
+      API.getAllPacks(currentUser.pin)
+        .then(function(r){
+          showLoading('packlist',false);
+          if(!r||!r.success){showToast((r&&r.message)||'Не удалось загрузить База_Пачек',true);return;}
+          allPacksCache=Array.isArray(r.packs)?r.packs:[];
+          var selectedPacks=allPacksCache.filter(function(pack){return normalizePackDate(pack.dateCut)===cutDate;});
+          if(selectedPacks.length===0){showToast('За выбранную дату пачки не найдены',true);return;}
+          renderMultiplePassports(selectedPacks);
+        })
+        .catch(function(e){showLoading('packlist',false);showToast('Ошибка загрузки: '+e.message,true);});
+    }
+
+    function renderMultiplePassports(selectedPacks){
+      if(!Array.isArray(selectedPacks)||selectedPacks.length===0){showToast('Нет пачек для печати',true);return;}
       showScreen('multipassport','🖨️ Печать паспортов',''+selectedPacks.length+' шт.');
       
       var html='';

@@ -62,14 +62,15 @@ var API = (function() {
       .catch(function() { updateStatus(false); });
   }
 
-  function fetchWithTimeout(url, options) {
+  function fetchWithTimeout(url, options, timeoutMs) {
+    var effectiveTimeout = timeoutMs || REQUEST_TIMEOUT_MS;
     var controller = new AbortController();
-    var timeoutId = setTimeout(function() { controller.abort(); }, REQUEST_TIMEOUT_MS);
+    var timeoutId = setTimeout(function() { controller.abort(); }, effectiveTimeout);
     var requestOptions = Object.assign({}, options, { signal: controller.signal });
     return fetch(url, requestOptions)
       .catch(function(err) {
         if (err && err.name === 'AbortError') {
-          throw new Error('Сервер не ответил за 15 секунд. Проверьте интернет и повторите попытку.');
+          throw new Error('Сервер не ответил за ' + Math.round(effectiveTimeout / 1000) + ' секунд. Проверьте интернет и повторите попытку.');
         }
         throw err;
       })
@@ -79,7 +80,7 @@ var API = (function() {
   // ============================================================
   // GET-запрос (для чтения данных)
   // ============================================================
-  function apiGet(action, params) {
+  function apiGet(action, params, timeoutMs) {
   var url = getBaseUrl() + '?action=' + encodeURIComponent(action);
   if (params) {
     Object.keys(params).forEach(function(key) {
@@ -95,7 +96,7 @@ var API = (function() {
     method: 'GET',
     cache: 'no-store',
     redirect: 'follow'
-    })
+    }, timeoutMs)
     .then(function(resp) {
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       return resp.json();
@@ -193,7 +194,7 @@ var API = (function() {
     
     // === Pack List ===
     getAllPacks: function(pin) {
-      return apiGet('getAllPacks', { pin: pin });
+      return apiGet('getAllPacks', { pin: pin }, 45000);
     },
     
     // === Passport ===
