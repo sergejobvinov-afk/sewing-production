@@ -1085,17 +1085,30 @@ function submitIssueWithOps() {
 function renderAcceptOperations(operations, packQty) {
   var html = '<div style="margin-bottom:12px;">Общее количество: <strong>' + packQty + '</strong> шт.</div>';
   html += '<div id="accept-ops-list">';
+  var hasRemainingOperations = false;
   operations.forEach(function(op, idx) {
-    var remaining = op.issued - op.accepted;
+    var issued = Number(op.issued) || 0;
+    var accepted = Number(op.accepted) || 0;
+    var remaining = Math.max(0, issued - accepted);
+    if (remaining > 0) hasRemainingOperations = true;
     html += '<div class="card" style="margin-bottom:8px;">';
     html += '<div><strong>' + escapeHtml(op.name) + '</strong>' +
 (currentUser && currentUser.role === 'master' ? '' : ' (цена швеи: ' + (op.priceSewer || op.price) + ' ₽)') +
 '</div>';
-    html += '<div>Выдано: ' + op.issued + ' | Принято: ' + op.accepted + ' | Осталось: ' + remaining + '</div>';
-    html += '<div style="margin-top:6px;">Принять: <input type="number" class="accept-op-qty" data-op="' + idx + '" min="0" max="' + remaining + '" value="0" inputmode="numeric" style="width:80px;"> шт.</div>';
+    html += '<div>Выдано: ' + issued + ' | Принято: ' + accepted + ' | Осталось: ' + remaining + '</div>';
+    if (remaining > 0) {
+      html += '<div style="margin-top:6px;">Принять: <input type="number" class="accept-op-qty" data-op="' + idx + '" min="0" max="' + remaining + '" value="0" inputmode="numeric" style="width:80px;"> шт.</div>';
+    } else {
+      html += '<div style="margin-top:6px;color:#4caf50;font-weight:600;">✓ Операция полностью принята</div>';
+    }
     html += '</div>';
   });
-  html += '</div><button class="action-btn btn-success" onclick="submitAcceptWithOps()">✅ Принять ОТК</button>';
+  html += '</div>';
+  if (hasRemainingOperations) {
+    html += '<button id="btn-submit-accept-ops" class="action-btn btn-success" onclick="submitAcceptWithOps()">✅ Принять ОТК</button>';
+  } else {
+    html += '<div class="card" style="color:#4caf50;font-weight:600;">Все операции этой пачки уже полностью приняты.</div>';
+  }
   document.getElementById('accept-ops-container').innerHTML = html;
 }
 
@@ -1113,16 +1126,22 @@ function submitAcceptWithOps() {
       inputs[i].focus();
       return;
     }
-    var opName = packData['accept'].operations[i].name;
-    acceptedByOperation.push({ operationName: opName, acceptedQty: qty });
+    if (qty > 0) {
+      var operationIndex = parseInt(inputs[i].getAttribute('data-op'), 10);
+      var opName = packData['accept'].operations[operationIndex].name;
+      acceptedByOperation.push({ operationName: opName, acceptedQty: qty });
+    }
     totalAccepted += qty;
   }
   if (totalAccepted === 0) { showToast('Укажите количество для приёмки', true); return; }
   if (!window.confirm('Подтвердить приёмку ОТК: ' + totalAccepted + ' шт.?')) return;
+  var submitButton = document.getElementById('btn-submit-accept-ops');
+  if (submitButton) submitButton.disabled = true;
   showLoading('accept', true);
   API.scanFinish(qr, acceptedByOperation, currentUser.pin)
     .then(function(r) {
       showLoading('accept', false);
+      if (submitButton) submitButton.disabled = false;
       if (r.success) {
         document.getElementById('accept-otk-area').style.display = 'none';
         document.querySelector('#screen-accept .scan-instruction').style.display = 'none';
@@ -1133,6 +1152,7 @@ function submitAcceptWithOps() {
     })
     .catch(function(e) {
       showLoading('accept', false);
+      if (submitButton) submitButton.disabled = false;
       showToast('Ошибка: ' + e.message, true);
     });
 }
