@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <title>Швейное производство</title>
@@ -358,7 +358,7 @@ var QRGen=(function(){
       color: #1a1a2e;
       min-height: 100vh;
       -webkit-tap-highlight-color: transparent;
-      user-select: none;
+      user-select: text;
     }
     
     .header {
@@ -377,7 +377,7 @@ var QRGen=(function(){
     .back-btn {
       position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
       background: rgba(255,255,255,0.2); border: none; color: white;
-      font-size: 20px; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: none;
+      font-size: 20px; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: none;
     }
     .back-btn.visible { display: block; }
     
@@ -428,12 +428,16 @@ var QRGen=(function(){
       font-size: 13px; color: #666; font-weight: 600; display: block; margin-bottom: 6px;
     }
     
-    input[type="text"], input[type="number"], select {
+    input[type="text"], input[type="password"], input[type="number"], select {
       width: 100%; padding: 14px 16px; border: 2px solid #e0e0e0; border-radius: 12px;
       font-size: 16px; outline: none; transition: border-color 0.2s;
       background: #fafafa; -webkit-appearance: none;
     }
     input:focus, select:focus { border-color: #667eea; background: white; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid #ffbf47;
+      outline-offset: 2px;
+    }
     
     .action-btn {
       width: 100%; padding: 16px; border: none; border-radius: 12px;
@@ -522,7 +526,7 @@ var QRGen=(function(){
     
     .scan-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
     .scan-tab {
-      flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 10px;
+      flex: 1; min-height: 44px; padding: 10px; border: 2px solid #e0e0e0; border-radius: 10px;
       background: white; font-size: 13px; font-weight: 600; cursor: pointer; text-align: center;
       transition: all 0.2s;
     }
@@ -717,7 +721,7 @@ var QRGen=(function(){
     <h1 id="headerTitle">Швейное производство</h1>
     <div class="subtitle" id="headerSubtitle">Система учета</div>
   </div>
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
   <div class="container">
 
     <!-- ===== LOGIN SCREEN ===== -->
@@ -725,7 +729,7 @@ var QRGen=(function(){
       <div style="text-align:center; padding:30px 0 20px;">
         <div style="font-size:64px;">🔐</div>
         <h2 style="margin-top:12px; color:#333;">Вход в систему</h2>
-        <p style="color:#888; margin-top:6px; font-size:14px;">Введите ваш PIN-код</p>
+        <label for="login-pin" style="display:block;color:#666; margin-top:6px; font-size:14px;">Введите ваш PIN-код</label>
       </div>
       <div class="card">
         <input type="password" id="login-pin" placeholder="PIN-код" inputmode="numeric" 
@@ -763,7 +767,7 @@ var QRGen=(function(){
         <div id="issue-camera-area"><div id="issue-qr-reader"></div></div>
         <div id="issue-manual-area" style="display:none;">
           <div class="manual-input-wrap">
-            <label>Введите ID пачки</label>
+            <label for="issue-manual-qr">Введите ID пачки</label>
             <input type="text" id="issue-manual-qr" placeholder="KR-2026-000001">
             <button class="action-btn btn-primary" onclick="manualQrSubmit('issue')">Найти</button>
           </div>
@@ -795,7 +799,7 @@ var QRGen=(function(){
         <div id="accept-camera-area"><div id="accept-qr-reader"></div></div>
         <div id="accept-manual-area" style="display:none;">
           <div class="manual-input-wrap">
-            <label>Введите ID пачки</label>
+            <label for="accept-manual-qr">Введите ID пачки</label>
             <input type="text" id="accept-manual-qr" placeholder="KR-2026-000001">
             <button class="action-btn btn-primary" onclick="manualQrSubmit('accept')">Найти</button>
           </div>
@@ -823,7 +827,7 @@ var QRGen=(function(){
       <div id="status-camera-area"><div id="status-qr-reader"></div></div>
       <div id="status-manual-area" style="display:none;">
         <div class="manual-input-wrap">
-          <label>Введите ID пачки</label>
+          <label for="status-manual-qr">Введите ID пачки</label>
           <input type="text" id="status-manual-qr" placeholder="KR-2026-000001">
           <button class="action-btn btn-primary" onclick="manualQrSubmit('status')">Проверить</button>
         </div>
@@ -843,15 +847,15 @@ var QRGen=(function(){
     <div class="screen" id="screen-addpack">
       <div class="card">
         <h3>➕ Новая пачка</h3>
-        <label style="font-size:13px;color:#666;font-weight:600;display:block;margin-bottom:6px;">Модель</label>
+        <label for="addpack-model" style="font-size:13px;color:#666;font-weight:600;display:block;margin-bottom:6px;">Модель</label>
         <select id="addpack-model"><option value="">-- Выберите --</option></select>
-        <label style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">Цвет</label>
+        <label for="addpack-color" style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">Цвет</label>
         <input type="text" id="addpack-color" placeholder="Красный, Синий...">
-        <label style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">Размер</label>
+        <label for="addpack-size" style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">Размер</label>
         <input type="text" id="addpack-size" placeholder="42, 44, 46...">
-        <label style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">Количество</label>
+        <label for="addpack-qty" style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">Количество</label>
         <input type="number" id="addpack-qty" placeholder="Кол-во штук" min="1" inputmode="numeric">
-        <label style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">№ паспорта</label>
+        <label for="addpack-passport" style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">№ паспорта</label>
         <input type="text" id="addpack-passport" placeholder="П-001">
         <button class="action-btn btn-success" onclick="submitAddPack()">✅ Создать пачку</button>
       </div>
@@ -901,11 +905,11 @@ var QRGen=(function(){
     <div class="screen" id="screen-users">
       <div class="card">
         <h3>👥 Добавить пользователя</h3>
-        <label style="font-size:13px;color:#666;font-weight:600;display:block;margin-bottom:6px;">Имя</label>
+        <label for="user-name" style="font-size:13px;color:#666;font-weight:600;display:block;margin-bottom:6px;">Имя</label>
         <input type="text" id="user-name" placeholder="Имя пользователя">
-        <label style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">PIN-код</label>
-        <input type="text" id="user-pin" placeholder="4 цифры" maxlength="4" inputmode="numeric">
-        <label style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">Роль</label>
+        <label for="user-pin" style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">PIN-код</label>
+        <input type="password" id="user-pin" placeholder="4 цифры" maxlength="4" inputmode="numeric" autocomplete="new-password">
+        <label for="user-role" style="font-size:13px;color:#666;font-weight:600;display:block;margin-top:12px;margin-bottom:6px;">Роль</label>
         <select id="user-role">
           <option value="">-- Выберите --</option>
           <option value="admin">👑 Админ</option>
@@ -1036,14 +1040,6 @@ function renderIssueOperations(operations, packQty) {
         opt.textContent = s;
         sel.appendChild(opt);
       });
-      // Принудительно выбираем первую швею (если есть)
-      if (sewers.length > 0) {
-        sel.value = sewers[0];
-        // Дополнительно генерируем событие change, чтобы браузер зафиксировал выбор
-        var evt = document.createEvent('HTMLEvents');
-        evt.initEvent('change', false, true);
-        sel.dispatchEvent(evt);
-      }
     });
   }).catch(function(e) { console.error(e); });
 }
@@ -1057,18 +1053,6 @@ function submitIssueWithOps() {
   }
   var selects = document.querySelectorAll('#issue-ops-list .issue-sewer-select');
   
-  // Принудительно устанавливаем значения, если они пустые (защита)
-  for (var i = 0; i < selects.length; i++) {
-    if (!selects[i].value) {
-      for (var j = 0; j < selects[i].options.length; j++) {
-        if (selects[i].options[j].value) {
-          selects[i].value = selects[i].options[j].value;
-          break;
-        }
-      }
-    }
-  }
-  
   var operationsData = [];
   for (var i = 0; i < selects.length; i++) {
     var sewer = selects[i].value;
@@ -1079,6 +1063,7 @@ function submitIssueWithOps() {
     var opName = packData['issue'].modelOperations[i].name;
     operationsData.push({ operationName: opName, sewerName: sewer });
   }
+  if (!window.confirm('Подтвердить выдачу пачки ' + qr + ' в пошив?')) return;
   showLoading('issue', true);
   API.scanAssign(qr, operationsData, currentUser.pin)
     .then(function(r) {
@@ -1107,7 +1092,7 @@ function renderAcceptOperations(operations, packQty) {
 (currentUser && currentUser.role === 'master' ? '' : ' (цена швеи: ' + (op.priceSewer || op.price) + ' ₽)') +
 '</div>';
     html += '<div>Выдано: ' + op.issued + ' | Принято: ' + op.accepted + ' | Осталось: ' + remaining + '</div>';
-    html += '<div style="margin-top:6px;">Принять: <input type="number" class="accept-op-qty" data-op="' + idx + '" min="0" max="' + remaining + '" value="' + remaining + '" style="width:80px;"> шт.</div>';
+    html += '<div style="margin-top:6px;">Принять: <input type="number" class="accept-op-qty" data-op="' + idx + '" min="0" max="' + remaining + '" value="0" inputmode="numeric" style="width:80px;"> шт.</div>';
     html += '</div>';
   });
   html += '</div><button class="action-btn btn-success" onclick="submitAcceptWithOps()">✅ Принять ОТК</button>';
@@ -1119,12 +1104,21 @@ function submitAcceptWithOps() {
   if (!qr) { showToast('QR не найден', true); return; }
   var inputs = document.querySelectorAll('#accept-ops-list .accept-op-qty');
   var acceptedByOperation = [];
+  var totalAccepted = 0;
   for (var i = 0; i < inputs.length; i++) {
     var qty = parseInt(inputs[i].value, 10);
-    if (isNaN(qty)) qty = 0;
+    var maxQty = parseInt(inputs[i].max, 10);
+    if (isNaN(qty) || qty < 0 || qty > maxQty) {
+      showToast('Проверьте количество для операции ' + (i + 1), true);
+      inputs[i].focus();
+      return;
+    }
     var opName = packData['accept'].operations[i].name;
     acceptedByOperation.push({ operationName: opName, acceptedQty: qty });
+    totalAccepted += qty;
   }
+  if (totalAccepted === 0) { showToast('Укажите количество для приёмки', true); return; }
+  if (!window.confirm('Подтвердить приёмку ОТК: ' + totalAccepted + ' шт.?')) return;
   showLoading('accept', true);
   API.scanFinish(qr, acceptedByOperation, currentUser.pin)
     .then(function(r) {
@@ -1232,7 +1226,11 @@ async function startScanner(target) {
       onQrScanned(target, text);
     },
     function(){}
-  ).catch(function(err){showToast('Камера недоступна',true);switchScanMode(target,'manual');});
+  ).catch(function(){
+    if (scanners[target] === scanner) delete scanners[target];
+    showToast('Камера недоступна — используйте ручной ввод',true);
+    switchScanMode(target,'manual');
+  });
 }
 
 function tryCameraQuiet(target){
@@ -1251,11 +1249,13 @@ async function stopAllScanners() {
   // Сначала аккуратно останавливаем все сканеры (они сами удалят свои DOM-элементы)
   for (var k in scanners) {
     try {
-      await scanners[k].stop();
+      var scanner = scanners[k];
+      delete scanners[k];
+      var state = typeof scanner.getState === 'function' ? scanner.getState() : null;
+      if (state === 2 || state === 3) await scanner.stop();
     } catch (e) {
-      console.warn('Ошибка при остановке сканера ' + k, e);
+      // Сканер мог уже остановиться во время переключения экрана.
     }
-    delete scanners[k];
   }
 
   // Только теперь подчищаем контейнеры (на случай, если что-то осталось)
@@ -1290,8 +1290,12 @@ function switchScanMode(target,mode){
     if(tabs[0])tabs[0].classList.remove('active');
     if(tabs[1])tabs[1].classList.add('active');
     if(scanners[target]){
-      try{scanners[target].stop();}catch(e){}
+      var scanner=scanners[target];
       delete scanners[target];
+      try{
+        var state=typeof scanner.getState==='function'?scanner.getState():null;
+        if(state===2||state===3)scanner.stop().catch(function(){});
+      }catch(e){}
     }
   }
 }
@@ -1300,7 +1304,7 @@ function manualQrSubmit(target){
   var v = document.getElementById(target+'-manual-qr').value.trim();
   if(!v){ showToast('Введите ID или отсканируйте QR', true); return; }
   var packId = extractPackId(v);
-  if(!packId){ showToast('Неверный формат QR-кода', true); return; }
+  if(!/^KR-\d{4}-\d{6}$/i.test(packId)){ showToast('Неверный формат. Пример: KR-2026-000001', true); return; }
   onQrScanned(target, packId);
 }
 
@@ -1459,16 +1463,17 @@ function onQrScanned(target, rawQr){
   tryCameraQuiet('status');
 }
     function checkStatus(qr){
+  currentQR['status']=qr;
   showLoading('status',true);document.getElementById('status-result').style.display='none';
   API.getPackStatus(qr,currentUser.pin)
   .then(function(r){
     showLoading('status',false);
     if(r&&r.success){
-      var h='<div class="card"><h3>📦 '+r.id+'</h3>';
+      var h='<div class="card"><h3>📦 '+escapeHtml(r.id)+'</h3>';
       h+=cardRow('Модель',r.model)+cardRow('Размер',r.size)+cardRow('Цвет',r.color||'—');
       h+=cardRow('Кол-во',r.qty+' шт.')+cardRow('Дата кроя',r.dateCut)+cardRow('Паспорт',r.passport);
       var sc=r.status==='Новая'?'#ff9800':(r.status==='Выдано'?'#2196f3':'#4caf50');
-      h+=cardRow('Статус','<span style="color:'+sc+'">'+r.status+'</span>');
+      h+=cardRow('Статус',r.status);
       h+='</div>';
 
       // Показываем операции
@@ -1476,14 +1481,14 @@ function onQrScanned(target, rawQr){
         h+='<div class="card"><h3>📜 Операции</h3>';
         r.operations.forEach(function(op){
           h+='<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;">';
-          h+='<div style="font-weight:600;color:#667eea;">'+op.name+'</div>';
-          if(op.sewer) h+='<div style="font-size:13px;">👩‍🔧 Швея: '+op.sewer+'</div>';
-          h+='<div style="font-size:13px;">Выдано: '+op.issued+' | Принято: '+op.accepted+'</div>';
-          if(op.issuedDate) h+='<div style="font-size:12px;color:#888;">Выдана: '+op.issuedDate+'</div>';
-          if(op.acceptedDate) h+='<div style="font-size:12px;color:#888;">Принята: '+op.acceptedDate+'</div>';
+          h+='<div style="font-weight:600;color:#667eea;">'+escapeHtml(op.name)+'</div>';
+          if(op.sewer) h+='<div style="font-size:13px;">👩‍🔧 Швея: '+escapeHtml(op.sewer)+'</div>';
+          h+='<div style="font-size:13px;">Выдано: '+escapeHtml(op.issued)+' | Принято: '+escapeHtml(op.accepted)+'</div>';
+          if(op.issuedDate) h+='<div style="font-size:12px;color:#888;">Выдана: '+escapeHtml(op.issuedDate)+'</div>';
+          if(op.acceptedDate) h+='<div style="font-size:12px;color:#888;">Принята: '+escapeHtml(op.acceptedDate)+'</div>';
           // Цену видит только не мастер
           if(currentUser && currentUser.role !== 'master'){
-            if(op.price) h+='<div style="font-size:13px;">Цена швеи: '+op.price+' ₽</div>';
+            if(op.price) h+='<div style="font-size:13px;">Цена швеи: '+escapeHtml(op.price)+' ₽</div>';
           }
           h+='</div>';
         });
@@ -1492,7 +1497,7 @@ function onQrScanned(target, rawQr){
 
       // Кнопка печати (admin, master)
       if(currentUser && (currentUser.role==='admin'||currentUser.role==='master')){
-        h+='<button class="action-btn btn-orange" onclick="printPassport(\''+r.id+'\')">🖨️ Печать паспорта</button>';
+        h+='<button class="action-btn btn-orange" onclick="printPassport(currentQR[\'status\'])">🖨️ Печать паспорта</button>';
       }
       document.getElementById('status-result').innerHTML=h;
       document.getElementById('status-result').style.display='block';
@@ -1508,7 +1513,7 @@ function openDashboard(){
   API.getDashboardData(currentUser.pin)
   .then(function(d){
     showLoading('dashboard',false);
-    if(!d||!d.success){document.getElementById('dashboard-content').innerHTML='<div class="result-card error"><div class="result-icon">❌</div><div>'+((d&&d.message)||'Нет доступа')+'</div></div>';return;}
+    if(!d||!d.success){document.getElementById('dashboard-content').innerHTML='<div class="result-card error"><div class="result-icon">❌</div><div>'+escapeHtml((d&&d.message)||'Нет доступа')+'</div></div>';return;}
     var h='';
     h+='<div class="dash-section"><h3>💰 Финансы</h3><div class="dash-grid">';
     h+=dashItem(formatNum(d.finance.revenue)+' ₽','Выручка','');
@@ -1534,12 +1539,12 @@ function openDashboard(){
     if(sk.length>0){
       h+='<div class="dash-section"><h3>👩‍🔧 Швеи</h3>';
       sk.sort(function(a,b){return d.sewers[b].zp-d.sewers[a].zp;});
-      sk.forEach(function(n){var s=d.sewers[n];h+='<div class="sewer-row"><div class="sewer-name">'+n+'</div><div class="sewer-stats"><div class="zp">'+formatNum(s.zp)+' ₽</div><div>'+s.items+' шт.</div></div></div>';});
+      sk.forEach(function(n){var s=d.sewers[n];h+='<div class="sewer-row"><div class="sewer-name">'+escapeHtml(n)+'</div><div class="sewer-stats"><div class="zp">'+escapeHtml(formatNum(s.zp))+' ₽</div><div>'+escapeHtml(s.items)+' шт.</div></div></div>';});
       h+='</div>';
     }
     document.getElementById('dashboard-content').innerHTML=h;
   })
-  .catch(function(e){showLoading('dashboard',false);document.getElementById('dashboard-content').innerHTML='<div class="result-card error"><div class="result-icon">❌</div><div>Ошибка: '+e.message+'</div></div>';
+  .catch(function(e){showLoading('dashboard',false);document.getElementById('dashboard-content').innerHTML='<div class="result-card error"><div class="result-icon">❌</div><div>Ошибка: '+escapeHtml(e.message)+'</div></div>';
   });
 }
 
@@ -1599,7 +1604,7 @@ function openDashboard(){
           renderPackList(r.packs);
           document.getElementById('packlist-count').textContent='Всего пачек: '+r.count;
         }else{
-          document.getElementById('packlist-table').innerHTML='<div class="result-card error"><div class="result-icon">❌</div><div>'+(r?r.message:'Ошибка загрузки')+'</div></div>';
+          document.getElementById('packlist-table').innerHTML='<div class="result-card error"><div class="result-icon">❌</div><div>'+escapeHtml(r?r.message:'Ошибка загрузки')+'</div></div>';
         }
       })
       .catch(function(e){
@@ -1625,12 +1630,12 @@ function openDashboard(){
         var statusColor=p.status==='Новая'?'#ff9800':(p.status==='Выдано'?'#2196f3':'#4caf50');
         html+='<tr class="pack-row" data-idx="'+idx+'" style="border-bottom:1px solid #eee;">';
         html+='<td style="padding:8px 4px;text-align:center;"><input type="checkbox" class="pack-check" data-idx="'+idx+'" onchange="updatePrintBtn()"></td>';
-        html+='<td style="padding:8px 4px;"><div style="font-weight:700;color:#333;">'+p.id+'</div>';
-        html+='<div style="font-size:11px;color:#888;">'+p.model+' | '+p.size+' | '+(p.color||'—')+' | '+p.qty+' шт.</div>';
-        if(p.passport) html+='<div style="font-size:11px;color:#aaa;">Паспорт: '+p.passport+'</div>';
+        html+='<td style="padding:8px 4px;"><div style="font-weight:700;color:#333;">'+escapeHtml(p.id)+'</div>';
+        html+='<div style="font-size:11px;color:#888;">'+escapeHtml(p.model)+' | '+escapeHtml(p.size)+' | '+escapeHtml(p.color||'—')+' | '+escapeHtml(p.qty)+' шт.</div>';
+        if(p.passport) html+='<div style="font-size:11px;color:#aaa;">Паспорт: '+escapeHtml(p.passport)+'</div>';
         html+='</td>';
-        html+='<td style="padding:8px 4px;text-align:center;"><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:'+statusColor+'22;color:'+statusColor+';">'+p.status+'</span></td>';
-        html+='<td style="padding:8px 4px;text-align:center;"><button onclick="printPassport(\''+p.id+'\')" style="background:none;border:none;font-size:18px;cursor:pointer;">🖨️</button></td>';
+        html+='<td style="padding:8px 4px;text-align:center;"><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:'+statusColor+'22;color:'+statusColor+';">'+escapeHtml(p.status)+'</span></td>';
+        html+='<td style="padding:8px 4px;text-align:center;"><button aria-label="Печать паспорта" onclick="printPassport(allPacksCache['+idx+'].id)" style="background:none;border:none;font-size:18px;cursor:pointer;min-width:44px;min-height:44px;">🖨️</button></td>';
         html+='</tr>';
       });
       
@@ -1800,29 +1805,31 @@ function openDashboard(){
     });
 }
 
+var sewerPacksCache = [];
 function renderSewerPacks(packs) {
+  sewerPacksCache = Array.isArray(packs) ? packs : [];
   if (!packs || packs.length === 0) {
     document.getElementById('sewer-packs-list').innerHTML = '<div style="text-align:center;padding:20px;color:#999;">Нет пачек</div>';
     return;
   }
   
   var html = '<div style="display:flex;flex-direction:column;gap:12px;">';
-  packs.forEach(function(p) {
+  packs.forEach(function(p, idx) {
     var statusColor = p.status === 'Выдано' ? '#2196f3' : '#4caf50';
     var statusText = p.status === 'Выдано' ? 'В пошиве' : 'Принято ОТК';
     html += '<div class="card" style="margin-bottom:0;">';
     html += '<div style="font-weight:700;font-size:16px;">📦 ' + escapeHtml(p.id) + '</div>';
     html += '<div style="font-size:13px;color:#666;">Модель: ' + escapeHtml(p.model) + ' | Размер: ' + escapeHtml(p.size) + ' | Цвет: ' + escapeHtml(p.color || '—') + '</div>';
-    html += '<div style="font-size:13px;color:#666;">Кол-во: ' + p.qty + ' шт.</div>';
+    html += '<div style="font-size:13px;color:#666;">Кол-во: ' + escapeHtml(p.qty) + ' шт.</div>';
     if (p.passport) html += '<div style="font-size:13px;color:#666;">Паспорт: ' + escapeHtml(p.passport) + '</div>';
     html += '<div style="margin-top:6px;"><span style="background:' + statusColor + '22;color:' + statusColor + ';padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600;">' + statusText + '</span></div>';
     if (p.status === 'Выдано') {
-      html += '<div style="font-size:12px;color:#888;margin-top:4px;">Выдана: ' + formatDate(p.issuedDate) + '</div>';
+      html += '<div style="font-size:12px;color:#888;margin-top:4px;">Выдана: ' + escapeHtml(formatDate(p.issuedDate)) + '</div>';
     } else {
-      html += '<div style="font-size:12px;color:#888;margin-top:4px;">Принято: ' + p.otkQty + ' из ' + p.qty + ' шт.</div>';
-      html += '<div style="font-size:12px;color:#888;">Дата приёмки: ' + formatDate(p.acceptedDate) + '</div>';
+      html += '<div style="font-size:12px;color:#888;margin-top:4px;">Принято: ' + escapeHtml(p.otkQty) + ' из ' + escapeHtml(p.qty) + ' шт.</div>';
+      html += '<div style="font-size:12px;color:#888;">Дата приёмки: ' + escapeHtml(formatDate(p.acceptedDate)) + '</div>';
     }
-    html += '<button class="action-btn btn-secondary" style="margin-top:8px;padding:8px;" onclick="checkStatus(\'' + escapeHtml(p.id) + '\')">🔍 Подробнее</button>';
+    html += '<button class="action-btn btn-secondary" style="margin-top:8px;padding:8px;" onclick="checkStatus(sewerPacksCache[' + idx + '].id)">🔍 Подробнее</button>';
     html += '</div>';
   });
   html += '</div>';
@@ -1839,18 +1846,23 @@ function formatDate(dateStr) {
       API.getUsers(currentUser.pin)
       .then(function(r){
         showLoading('users',false);
-        if(!r||!r.success){document.getElementById('users-list').innerHTML='<div>'+((r&&r.message)||'Ошибка')+'</div>';return;}
-        var h='';
+        if(!r||!r.success){document.getElementById('users-list').textContent=(r&&r.message)||'Ошибка';return;}
+        var list=document.getElementById('users-list');
+        list.replaceChildren();
         r.users.forEach(function(u){
           var active=String(u.active).toLowerCase()==='да';
           var badge=ROLE_NAMES[u.role]||u.role;
-          h+='<div class="sewer-row">';
-          h+='<div><div class="sewer-name" style="'+(active?'':'color:#ccc;text-decoration:line-through;')+'">'+u.name+'</div>';
-          h+='<div style="font-size:11px;color:#888;">PIN: '+u.pin+' · '+badge+'</div></div>';
-          h+='<button style="padding:6px 12px;border:1px solid '+(active?'#e53935':'#43a047')+';border-radius:8px;background:white;color:'+(active?'#e53935':'#43a047')+';font-size:12px;font-weight:600;cursor:pointer;" onclick="toggleUserFn(\''+u.pin+'\')">'+(active?'Выкл':'Вкл')+'</button>';
-          h+='</div>';
+          var row=document.createElement('div');row.className='sewer-row';
+          var info=document.createElement('div');
+          var name=document.createElement('div');name.className='sewer-name';name.textContent=u.name||'Без имени';
+          if(!active){name.style.color='#777';name.style.textDecoration='line-through';}
+          var meta=document.createElement('div');meta.style.cssText='font-size:12px;color:#666;';meta.textContent=badge;
+          info.append(name,meta);
+          var button=document.createElement('button');button.type='button';button.textContent=active?'Выключить':'Включить';
+          button.style.cssText='min-height:44px;padding:8px 14px;border:1px solid '+(active?'#e53935':'#43a047')+';border-radius:8px;background:white;color:'+(active?'#b71c1c':'#2e7d32')+';font-size:13px;font-weight:600;cursor:pointer;';
+          button.addEventListener('click',function(){toggleUserFn(u.pin);});
+          row.append(info,button);list.appendChild(row);
         });
-        document.getElementById('users-list').innerHTML=h;
       })
       .catch(function(e){showLoading('users',false);showToast('Ошибка: '+e.message,true);});
     }
@@ -1859,7 +1871,7 @@ function formatDate(dateStr) {
       var pin=document.getElementById('user-pin').value.trim();
       var role=document.getElementById('user-role').value;
       if(!name){showToast('Введите имя',true);return;}
-      if(!pin||pin.length<4){showToast('PIN: минимум 4 цифры',true);return;}
+      if(!/^\d{4}$/.test(pin)){showToast('PIN должен содержать ровно 4 цифры',true);return;}
       if(!role){showToast('Выберите роль',true);return;}
       API.addUser(name,pin,role,currentUser.pin)
       .then(function(r){
@@ -1882,9 +1894,9 @@ function formatDate(dateStr) {
       if(r.scans)r.scans.forEach(function(s){if(s.sewer)h+=cardRow('Швея',s.sewer);});
       return h;
     }
-    function cardRow(lbl,val){return '<div class="card-row"><span class="label">'+lbl+'</span><span class="value">'+val+'</span></div>';}
-    function passRow(lbl,val){return '<div class="passport-row"><span class="passport-label">'+lbl+'</span><span class="passport-value">'+val+'</span></div>';}
-    function dashItem(val,lbl,cls){return '<div class="dash-item '+cls+'"><div class="dash-value">'+val+'</div><div class="dash-label">'+lbl+'</div></div>';}
+    function cardRow(lbl,val){return '<div class="card-row"><span class="label">'+escapeHtml(lbl)+'</span><span class="value">'+escapeHtml(val)+'</span></div>';}
+    function passRow(lbl,val){return '<div class="passport-row"><span class="passport-label">'+escapeHtml(lbl)+'</span><span class="passport-value">'+escapeHtml(val)+'</span></div>';}
+    function dashItem(val,lbl,cls){return '<div class="dash-item '+escapeHtml(cls||'')+'"><div class="dash-value">'+escapeHtml(val)+'</div><div class="dash-label">'+escapeHtml(lbl)+'</div></div>';}
     function showLoading(t,s){var e=document.getElementById(t+'-loading');if(e){if(s)e.classList.add('active');else e.classList.remove('active');}}
     function showResultCard(t, ok, msg){
   var c = document.getElementById(t+'-result');
@@ -1896,7 +1908,7 @@ function formatDate(dateStr) {
     }
     function showToast(msg,err){var t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(err?' error':'');setTimeout(function(){t.className='toast';},3000);}
     function formatNum(n){if(!n&&n!==0)return '0';return Number(n).toLocaleString('ru-RU');}
-    function escapeHtml(t){if(!t)return '';var d=document.createElement('div');d.textContent=t;return d.innerHTML.replace(/\\n/g,'<br>');}
+    function escapeHtml(t){if(t===null||t===undefined)return '';var d=document.createElement('div');d.textContent=String(t);return d.innerHTML.replace(/\n/g,'<br>');}
 
     // Auto-focus PIN on load
     document.getElementById('login-pin').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});

@@ -4,6 +4,7 @@
 // ============================================================
 
 var API = (function() {
+  var REQUEST_TIMEOUT_MS = 15000;
   // ⚠️ ЗАМЕНИТЕ НА URL ВАШЕГО РАЗВЕРНУТОГО СКРИПТА
   var BASE_URL = 'https://script.google.com/macros/s/AKfycbzyrZKSHkT_KDaJ8qEx9yrj1Qn4gaKO2CJMi94x8ErlQ6QwM9xqPrtUdNREZZsDO7s/exec';
   
@@ -12,17 +13,14 @@ var API = (function() {
   var _online = null; // null = unknown, true = online, false = offline
   
   function setBaseUrl(url) {
-    BASE_URL = url;
-    // Сохраняем в localStorage для удобства
-    try { localStorage.setItem('api_base_url', url); } catch(e){}
+    var parsed = new URL(url);
+    if (parsed.protocol !== 'https:' || parsed.hostname !== 'script.google.com') {
+      throw new Error('Разрешены только HTTPS-адреса Google Apps Script');
+    }
+    BASE_URL = parsed.href;
   }
   
   function getBaseUrl() {
-    // Попытка загрузить из localStorage
-    try {
-      var saved = localStorage.getItem('api_base_url');
-      if (saved) BASE_URL = saved;
-    } catch(e){}
     return BASE_URL;
   }
   
@@ -63,6 +61,20 @@ var API = (function() {
       .then(function(r) { updateStatus(r && r.success); })
       .catch(function() { updateStatus(false); });
   }
+
+  function fetchWithTimeout(url, options) {
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, REQUEST_TIMEOUT_MS);
+    var requestOptions = Object.assign({}, options, { signal: controller.signal });
+    return fetch(url, requestOptions)
+      .catch(function(err) {
+        if (err && err.name === 'AbortError') {
+          throw new Error('Сервер не ответил за 15 секунд. Проверьте интернет и повторите попытку.');
+        }
+        throw err;
+      })
+      .finally(function() { clearTimeout(timeoutId); });
+  }
   
   // ============================================================
   // GET-запрос (для чтения данных)
@@ -79,7 +91,7 @@ var API = (function() {
   // Добавляем случайный параметр для обхода кэша
   url += '&_=' + Date.now();
   
-  return fetch(url, {
+  return fetchWithTimeout(url, {
     method: 'GET',
     cache: 'no-store',
     redirect: 'follow'
@@ -102,13 +114,13 @@ var API = (function() {
   // POST-запрос (для записи данных)
   // ============================================================
   function apiPost(action, body) {
-    body.action = action;
+    var payload = Object.assign({}, body, { action: action });
     
-    return fetch(getBaseUrl(), {
+    return fetchWithTimeout(getBaseUrl(), {
       method: 'POST',
       redirect: 'follow',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(payload)
     })
     .then(function(resp) {
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
