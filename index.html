@@ -1507,7 +1507,11 @@ function onQrScanned(target, rawQr){
       // Показываем операции
       if(r.operations && r.operations.length > 0){
         h+='<div class="card"><h3>📜 Операции</h3>';
+        var hasIssuedOperations=false;
+        var hasAcceptedOperations=false;
         r.operations.forEach(function(op){
+          if(Number(op.issued)>0) hasIssuedOperations=true;
+          if(Number(op.accepted)>0) hasAcceptedOperations=true;
           h+='<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;">';
           h+='<div style="font-weight:600;color:#667eea;">'+escapeHtml(op.name)+'</div>';
           if(op.sewer) h+='<div style="font-size:13px;">👩‍🔧 Швея: '+escapeHtml(op.sewer)+'</div>';
@@ -1521,6 +1525,10 @@ function onQrScanned(target, rawQr){
           h+='</div>';
         });
         h+='</div>';
+
+        if(currentUser && (currentUser.role==='admin'||currentUser.role==='master') && hasIssuedOperations && !hasAcceptedOperations){
+          h+='<button class="action-btn btn-danger" onclick="cancelCurrentIssue()">↩️ Отменить выдачу</button>';
+        }
       }
 
       // Кнопка печати (admin, master)
@@ -1532,6 +1540,30 @@ function onQrScanned(target, rawQr){
     }else{showResultCard('status',false,r?r.message:'Ошибка');}
   })
   .catch(function(e){showLoading('status',false);showResultCard('status',false,'Ошибка: '+e.message);});
+}
+
+function cancelCurrentIssue(){
+  var qr=currentQR['status'];
+  if(!qr){showToast('Пачка не выбрана',true);return;}
+  if(!currentUser||(currentUser.role!=='admin'&&currentUser.role!=='master')){
+    showToast('Недостаточно прав для отмены выдачи',true);return;
+  }
+  if(!window.confirm('Отменить выдачу пачки '+qr+'? Швеи, выданные количества и даты выдачи будут сброшены.')) return;
+  showLoading('status',true);
+  API.cancelIssue(qr,currentUser.pin)
+    .then(function(r){
+      showLoading('status',false);
+      if(r&&r.success){
+        showToast(r.message||'Выдача отменена');
+        checkStatus(qr);
+      }else{
+        showResultCard('status',false,(r&&r.message)||'Не удалось отменить выдачу');
+      }
+    })
+    .catch(function(e){
+      showLoading('status',false);
+      showResultCard('status',false,'Ошибка: '+e.message);
+    });
 }
     // ===== DASHBOARD =====
     // В index.html, функция openDashboard (заменить содержимое)

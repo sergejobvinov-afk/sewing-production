@@ -181,6 +181,11 @@ var API = (function() {
       return apiPost('scanAssign', { qr: qr, operationsData: operationsData, pin: pin });
     },
 
+    // Отменить ошибочную выдачу, пока по пачке ничего не принято ОТК
+    cancelIssue: function(qr, pin) {
+      return apiPost('cancelIssue', { qr: qr, pin: pin });
+    },
+
     // Принять ОТК с распределением по операциям (заменяет старый scanFinish)
     scanFinish: function(qr, acceptedByOperation, pin) {
       return apiPost('scanFinish', { qr: qr, acceptedByOperation: acceptedByOperation, pin: pin });
