@@ -1177,6 +1177,7 @@ function submitAcceptWithOps() {
       
       if (role === 'admin' || role === 'master') {
         btns += menuBtn('btn-issue', '📤', 'Взять в пошив', 'Сканировать QR и выдать швее', 'openIssue()');
+        btns += menuBtn('btn-status', '↩️', 'Отменить выдачу', 'Сканировать пачку и вернуть в статус «Новая»', 'openCancelIssue()');
         btns += menuBtn('btn-accept', '📥', 'Принять ОТК', 'Сканировать QR и принять', 'openAccept()');
         btns += menuBtn('btn-status', '🔍', 'Статус пачки', 'Узнать статус по QR-коду', 'openStatusCheck()');
         btns += menuBtn('btn-addpack', '➕', 'Новая пачка', 'Добавить пачку + печать паспорта', 'openAddPack()');
@@ -1487,6 +1488,14 @@ function onQrScanned(target, rawQr){
   document.getElementById('status-result').style.display='none';
   document.getElementById('status-result').innerHTML='';
   showScreen('status','🔍 Статус','Проверка пачки');
+  switchScanMode('status','manual');
+  tryCameraQuiet('status');
+}
+    async function openCancelIssue() {
+  await stopAllScanners();
+  document.getElementById('status-result').style.display='none';
+  document.getElementById('status-result').innerHTML='';
+  showScreen('status','↩️ Отменить выдачу','Отсканируйте выданную пачку');
   switchScanMode('status','manual');
   tryCameraQuiet('status');
 }
