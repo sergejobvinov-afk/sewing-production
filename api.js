@@ -209,6 +209,14 @@ var API = (function() {
     getAllPacks: function(pin) {
       return apiGet('getAllPacks', { pin: pin }, 45000);
     },
+
+    editPackPassport: function(id, fields, pin) {
+      return apiPost('editPackPassport', { id: id, fields: fields, pin: pin });
+    },
+
+    annulPackPassport: function(id, reason, pin) {
+      return apiPost('annulPackPassport', { id: id, reason: reason, pin: pin });
+    },
     
     // === Passport ===
     getPassportData: function(packId, pin) {

@@ -1694,15 +1694,17 @@ function openDashboard(){
       html+='<th style="padding:8px 4px;text-align:center;width:30px;">☑</th>';
       html+='<th style="padding:8px 4px;text-align:left;">ID / Модель</th>';
       html+='<th style="padding:8px 4px;text-align:center;">Статус</th>';
+      html+='<th style="padding:8px 4px;text-align:center;width:88px;">Действия</th>';
       html+='<th style="padding:8px 4px;text-align:center;width:50px;">🖨️</th>';
       html+='</tr></thead><tbody>';
       
       if(packs.length===0){
-        html+='<tr><td colspan="4" style="text-align:center;padding:20px;color:#999;">Нет пачек</td></tr>';
+        html+='<tr><td colspan="5" style="text-align:center;padding:20px;color:#999;">Нет пачек</td></tr>';
       }
       
       packs.forEach(function(p,idx){
-        var statusColor=p.status==='Новая'?'#ff9800':(p.status==='Выдано'?'#2196f3':'#4caf50');
+        var statusColor=p.status==='Новая'?'#ff9800':(p.status==='Выдано'?'#2196f3':(p.status==='Аннулирована'?'#d32f2f':'#4caf50'));
+        var cacheIdx=allPacksCache.findIndex(function(item){return item.id===p.id;});
         html+='<tr class="pack-row" data-idx="'+idx+'" style="border-bottom:1px solid #eee;">';
         html+='<td style="padding:8px 4px;text-align:center;"><input type="checkbox" class="pack-check" data-idx="'+idx+'" onchange="updatePrintBtn()"></td>';
         html+='<td style="padding:8px 4px;"><div style="font-weight:700;color:#333;">'+escapeHtml(p.id)+'</div>';
@@ -1710,12 +1712,55 @@ function openDashboard(){
         if(p.passport) html+='<div style="font-size:11px;color:#aaa;">Паспорт: '+escapeHtml(p.passport)+'</div>';
         html+='</td>';
         html+='<td style="padding:8px 4px;text-align:center;"><span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;background:'+statusColor+'22;color:'+statusColor+';">'+escapeHtml(p.status)+'</span></td>';
-        html+='<td style="padding:8px 4px;text-align:center;"><button aria-label="Печать паспорта" onclick="printPassport(allPacksCache['+idx+'].id)" style="background:none;border:none;font-size:18px;cursor:pointer;min-width:44px;min-height:44px;">🖨️</button></td>';
+        html+='<td style="padding:8px 2px;text-align:center;white-space:nowrap;">';
+        if(p.status==='Новая'&&cacheIdx>=0){
+          html+='<button aria-label="Редактировать паспорт" onclick="editPackFromList('+cacheIdx+')" style="background:none;border:none;font-size:18px;cursor:pointer;min-width:40px;min-height:44px;">✏️</button>';
+          html+='<button aria-label="Аннулировать паспорт" onclick="annulPackFromList('+cacheIdx+')" style="background:none;border:none;font-size:18px;cursor:pointer;min-width:40px;min-height:44px;">🚫</button>';
+        }
+        html+='</td>';
+        html+='<td style="padding:8px 4px;text-align:center;">';
+        if(p.status!=='Аннулирована'&&cacheIdx>=0) html+='<button aria-label="Печать паспорта" onclick="printPassport(allPacksCache['+cacheIdx+'].id)" style="background:none;border:none;font-size:18px;cursor:pointer;min-width:44px;min-height:44px;">🖨️</button>';
+        html+='</td>';
         html+='</tr>';
       });
       
       html+='</tbody></table>';
       document.getElementById('packlist-table').innerHTML=html;
+    }
+
+    function packDateForInput(value){
+      var d=new Date(value);
+      if(!isNaN(d.getTime())) return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+      return String(value||'').slice(0,10);
+    }
+
+    function editPackFromList(idx){
+      var p=allPacksCache[idx];
+      if(!p||p.status!=='Новая'){showToast('Изменять можно только новую пачку',true);return;}
+      var dateCut=window.prompt('Дата кроя (ГГГГ-ММ-ДД)',packDateForInput(p.dateCut)); if(dateCut===null)return;
+      var model=window.prompt('Модель',p.model||''); if(model===null)return;
+      var size=window.prompt('Размер',p.size||''); if(size===null)return;
+      var qty=window.prompt('Количество изделий',String(p.qty||'')); if(qty===null)return;
+      var passport=window.prompt('Номер паспорта',p.passport||''); if(passport===null)return;
+      var color=window.prompt('Цвет',p.color||''); if(color===null)return;
+      if(!window.confirm('Сохранить изменения паспорта '+p.id+'?'))return;
+      showLoading('packlist',true);
+      API.editPackPassport(p.id,{dateCut:dateCut,model:model,size:size,qty:Number(qty),passport:passport,color:color},currentUser.pin)
+        .then(function(r){showLoading('packlist',false);if(r&&r.success){showToast(r.message);openPackList();}else showToast((r&&r.message)||'Не удалось изменить паспорт',true);})
+        .catch(function(e){showLoading('packlist',false);showToast('Ошибка: '+e.message,true);});
+    }
+
+    function annulPackFromList(idx){
+      var p=allPacksCache[idx];
+      if(!p||p.status!=='Новая'){showToast('Аннулировать можно только новую пачку',true);return;}
+      var reason=window.prompt('Укажите причину аннулирования паспорта '+p.id); if(reason===null)return;
+      reason=reason.trim();
+      if(reason.length<3){showToast('Укажите причину аннулирования',true);return;}
+      if(!window.confirm('Аннулировать паспорт '+p.id+'? Запись останется в журнале и её нельзя будет выдавать в пошив.'))return;
+      showLoading('packlist',true);
+      API.annulPackPassport(p.id,reason,currentUser.pin)
+        .then(function(r){showLoading('packlist',false);if(r&&r.success){showToast(r.message);openPackList();}else showToast((r&&r.message)||'Не удалось аннулировать паспорт',true);})
+        .catch(function(e){showLoading('packlist',false);showToast('Ошибка: '+e.message,true);});
     }
     
     function filterPackList(){
