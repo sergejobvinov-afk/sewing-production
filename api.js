@@ -172,8 +172,8 @@ var API = (function() {
     },
     
     // Получить операции модели
-    getModelOperations: function(model) {
-      return apiGet('getModelOperations', { model: model });
+    getModelOperations: function(model, pin) {
+      return apiGet('getModelOperations', { model: model, pin: pin });
     },
 
     // Выдать пачку с распределением операций (заменяет старый scanAssign)

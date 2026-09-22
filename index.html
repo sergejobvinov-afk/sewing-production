@@ -1378,7 +1378,7 @@ function onQrScanned(target, rawQr){
           return;
         }
         // Загружаем операции модели
-        API.getModelOperations(r.model).then(function(ops) {
+        API.getModelOperations(r.model, currentUser.pin).then(function(ops) {
           // Гарантируем, что ops — массив
           ops = Array.isArray(ops) ? ops : [];
           packData['issue'].modelOperations = ops;
