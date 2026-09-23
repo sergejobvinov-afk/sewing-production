@@ -95,6 +95,52 @@
     return Promise.resolve({ success: false, message: 'Пилот Supabase работает только на чтение. Запись остаётся в рабочей системе.' });
   }
 
+  function profileForSession(authSession) {
+    session = authSession;
+    sessionStorage.setItem('supabasePilotSession', JSON.stringify(authSession));
+    return table('profiles', 'select=display_name,role,active&id=eq.' + encodeURIComponent(authSession.user ? authSession.user.id : authSession.user_id) + '&limit=1')
+      .then(function (profiles) {
+        var profile = profiles[0];
+        if (!profile || !profile.active) throw new Error('Профиль пользователя не активирован');
+        return { success: true, name: profile.display_name, role: profile.role, pin: '' };
+      });
+  }
+
+  function sessionFromHash() {
+    if (!window.location.hash) return null;
+    var hash = new URLSearchParams(window.location.hash.slice(1));
+    var accessToken = hash.get('access_token');
+    if (!accessToken) return null;
+    return {
+      access_token: accessToken,
+      refresh_token: hash.get('refresh_token') || '',
+      expires_in: Number(hash.get('expires_in')) || 3600,
+      token_type: hash.get('token_type') || 'bearer',
+      user_id: hash.get('user_id') || ''
+    };
+  }
+
+  function finishMagicLinkLogin() {
+    var hashSession = sessionFromHash();
+    if (!hashSession) return;
+    loadConfig().then(function (loaded) {
+      config = loaded;
+      session = hashSession;
+      return request('/auth/v1/user', { method: 'GET' });
+    }).then(function (user) {
+      hashSession.user = user;
+      return profileForSession(hashSession);
+    }).then(function (result) {
+      history.replaceState(null, '', location.pathname + location.search);
+      window.currentUser = { name: result.name, pin: '', role: result.role };
+      if (typeof window.buildHomeMenu === 'function') window.buildHomeMenu();
+      if (typeof window.showScreen === 'function') window.showScreen('home', 'Швейное производство', 'Supabase · только чтение');
+      if (typeof window.showToast === 'function') window.showToast('Вход выполнен: ' + result.name);
+    }).catch(function (error) {
+      if (typeof window.showToast === 'function') window.showToast('Ошибка входа: ' + error.message, true);
+    });
+  }
+
   var pilotApi = Object.assign({}, originalApi, {
     login: function (password) {
       var emailInput = document.getElementById('login-email');
@@ -107,13 +153,7 @@
           body: JSON.stringify({ email: email, password: password })
         });
       }).then(function (auth) {
-        session = auth;
-        sessionStorage.setItem('supabasePilotSession', JSON.stringify(auth));
-        return table('profiles', 'select=display_name,role,active&id=eq.' + encodeURIComponent(auth.user.id) + '&limit=1');
-      }).then(function (profiles) {
-        var profile = profiles[0];
-        if (!profile || !profile.active) throw new Error('Профиль пользователя не активирован');
-        return { success: true, name: profile.display_name, role: profile.role, pin: '' };
+        return profileForSession(auth);
       }).catch(function (error) {
         session = null;
         sessionStorage.removeItem('supabasePilotSession');
@@ -210,5 +250,6 @@
     badge.textContent = '⚡ SUPABASE PILOT · READ ONLY';
     badge.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:9999;background:#0f766e;color:#fff;padding:6px 10px;border-radius:12px;font:700 11px system-ui;';
     document.body.appendChild(badge);
+    finishMagicLinkLogin();
   });
 })();
