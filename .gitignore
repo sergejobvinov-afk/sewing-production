@@ -2,3 +2,5 @@ supabase/config.js
 .env
 .env.*
 !.env.example
+supabase/import/*.sql
+supabase/import/*.html
