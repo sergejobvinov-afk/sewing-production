@@ -136,12 +136,44 @@
       return profileForSession(hashSession);
     }).then(function (result) {
       history.replaceState(null, '', location.pathname + location.search);
-      window.currentUser = { name: result.name, pin: '', role: result.role };
-      if (typeof window.buildHomeMenu === 'function') window.buildHomeMenu();
-      if (typeof window.showScreen === 'function') window.showScreen('home', 'Швейное производство', 'Supabase · только чтение');
+      showAuthenticatedHome(result);
       if (typeof window.showToast === 'function') window.showToast('Вход выполнен: ' + result.name);
     }).catch(function (error) {
       if (typeof window.showToast === 'function') window.showToast('Ошибка входа: ' + error.message, true);
+    });
+  }
+
+  function showAuthenticatedHome(result) {
+    window.currentUser = { name: result.name, pin: '', role: result.role };
+    if (typeof window.buildHomeMenu === 'function') window.buildHomeMenu();
+    if (typeof window.showScreen === 'function') window.showScreen('home', 'Швейное производство', 'Supabase · пилот');
+  }
+
+  function restoreSavedLogin() {
+    if (sessionFromHash()) return;
+    var saved = sessionStorage.getItem('supabasePilotSession');
+    if (!saved) return;
+    try { session = JSON.parse(saved); }
+    catch (error) { sessionStorage.removeItem('supabasePilotSession'); return; }
+    loadConfig().then(function (loaded) {
+      config = loaded;
+      return request('/auth/v1/user', { method: 'GET' }).catch(function () {
+        if (!session.refresh_token) throw new Error('Сессия истекла');
+        return request('/auth/v1/token?grant_type=refresh_token', {
+          method: 'POST',
+          body: JSON.stringify({ refresh_token: session.refresh_token })
+        }).then(function (refreshed) {
+          session = refreshed;
+          sessionStorage.setItem('supabasePilotSession', JSON.stringify(refreshed));
+          return refreshed.user;
+        });
+      });
+    }).then(function (user) {
+      session.user = user;
+      return profileForSession(session);
+    }).then(showAuthenticatedHome).catch(function () {
+      session = null;
+      sessionStorage.removeItem('supabasePilotSession');
     });
   }
 
@@ -274,5 +306,6 @@
     badge.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:9999;background:#0f766e;color:#fff;padding:6px 10px;border-radius:12px;font:700 11px system-ui;';
     document.body.appendChild(badge);
     finishMagicLinkLogin();
+    restoreSavedLogin();
   });
 })();
