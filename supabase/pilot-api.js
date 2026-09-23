@@ -52,6 +52,10 @@
     return request('/rest/v1/' + name + '?' + query, { method: 'GET' });
   }
 
+  function rpc(name, body) {
+    return request('/rest/v1/rpc/' + name, { method: 'POST', body: JSON.stringify(body || {}) });
+  }
+
   function statusLabel(value) { return STATUS_LABELS[value] || value || 'Новая'; }
   function dateText(value) { return value ? String(value).slice(0, 10) : ''; }
   function packDto(pack, operations) {
@@ -215,12 +219,31 @@
         });
     },
 
-    scanAssign: readOnlyError,
-    scanFinish: readOnlyError,
-    cancelIssue: readOnlyError,
-    addPack: readOnlyError,
-    editPackPassport: readOnlyError,
-    annulPackPassport: readOnlyError,
+    getSewerList: function () {
+      return table('pack_operations', 'select=sewer_name&sewer_name=not.is.null&order=sewer_name.asc').then(function (rows) {
+        return Array.from(new Set(rows.map(function (row) { return row.sewer_name; }).filter(Boolean)));
+      });
+    },
+    scanAssign: function (qr, operationsData) {
+      return rpc('issue_pack', { p_pack_id: String(qr).split('|')[0].trim(), p_operations: operationsData });
+    },
+    scanFinish: function (qr, acceptedByOperation) {
+      if (!Array.isArray(acceptedByOperation)) return readOnlyError();
+      return rpc('accept_pack', { p_pack_id: String(qr).split('|')[0].trim(), p_operations: acceptedByOperation });
+    },
+    cancelIssue: function (qr) {
+      return rpc('cancel_pack_issue', { p_pack_id: String(qr).split('|')[0].trim() });
+    },
+    addPack: function (model, size, qty, passport, color) {
+      return rpc('create_pack', { p_model: model, p_size: size, p_quantity: Number(qty), p_passport_no: passport || '', p_color: color || '' });
+    },
+    editPackPassport: function (id, fields) {
+      return rpc('edit_pack', { p_pack_id: id, p_cut_date: fields.dateCut, p_model: fields.model, p_size: fields.size,
+        p_quantity: Number(fields.qty), p_passport_no: fields.passport || '', p_color: fields.color || '' });
+    },
+    annulPackPassport: function (id, reason) {
+      return rpc('annul_pack', { p_pack_id: id, p_reason: reason });
+    },
     addUser: readOnlyError,
     toggleUser: readOnlyError
   });
@@ -245,9 +268,9 @@
     pin.removeAttribute('maxlength');
     pin.placeholder = 'Пароль';
     pin.autocomplete = 'current-password';
-    label.textContent = 'Тестовый вход Supabase (только чтение)';
+    label.textContent = 'Тестовый вход Supabase';
     var badge = document.createElement('div');
-    badge.textContent = '⚡ SUPABASE PILOT · READ ONLY';
+    badge.textContent = '⚡ SUPABASE PILOT';
     badge.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:9999;background:#0f766e;color:#fff;padding:6px 10px;border-radius:12px;font:700 11px system-ui;';
     document.body.appendChild(badge);
     finishMagicLinkLogin();

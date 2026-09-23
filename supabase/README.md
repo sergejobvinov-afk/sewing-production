@@ -19,14 +19,14 @@
 4. Скопировать `config.example.js` в `config.js`, указать Project URL и publishable key.
 5. Никогда не помещать `service_role` key во frontend или GitHub.
 
-## Локальный режим только чтения
+## Локальный пилотный режим
 
 1. Создать `supabase/config.js` по образцу `config.example.js` и указать Project URL и браузерный `anon`/publishable key.
 2. Открыть приложение с параметром `?backend=supabase`, например:
    `http://localhost:8088/index.html?backend=supabase`.
 3. Войти email и паролем тестового пользователя Supabase Auth.
 
-Без параметра `backend=supabase` приложение продолжает использовать Google Apps Script и обычный PIN-вход. В пилотном режиме операции записи намеренно заблокированы.
+Без параметра `backend=supabase` приложение продолжает использовать Google Apps Script и обычный PIN-вход. Запись в пилоте выполняется только через защищённые RPC-функции из миграции `202609230002_write_rpc.sql`; прямые изменения таблиц клиенту запрещены.
 
 ## Безопасный порядок миграции
 
