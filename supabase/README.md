@@ -19,6 +19,15 @@
 4. Скопировать `config.example.js` в `config.js`, указать Project URL и publishable key.
 5. Никогда не помещать `service_role` key во frontend или GitHub.
 
+## Локальный режим только чтения
+
+1. Создать `supabase/config.js` по образцу `config.example.js` и указать Project URL и браузерный `anon`/publishable key.
+2. Открыть приложение с параметром `?backend=supabase`, например:
+   `http://localhost:8088/index.html?backend=supabase`.
+3. Войти email и паролем тестового пользователя Supabase Auth.
+
+Без параметра `backend=supabase` приложение продолжает использовать Google Apps Script и обычный PIN-вход. В пилотном режиме операции записи намеренно заблокированы.
+
 ## Безопасный порядок миграции
 
 1. Импортировать копию `База_Пачек`, `Операции` и пользователей.
