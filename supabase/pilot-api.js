@@ -327,6 +327,10 @@
     badge.textContent = '⚡ SUPABASE PILOT';
     badge.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:9999;background:#0f766e;color:#fff;padding:6px 10px;border-radius:12px;font:700 11px system-ui;';
     document.body.appendChild(badge);
+    var usersAddCard = document.getElementById('users-add-card');
+    if (usersAddCard) {
+      usersAddCard.innerHTML = '<h3>👥 Добавить пользователя</h3><div style="font-size:13px;color:#666;line-height:1.5;">Новые учётные записи создаются администратором через Supabase Auth. PIN-коды в пилоте не используются.</div>';
+    }
     finishMagicLinkLogin();
     restoreSavedLogin();
   });
