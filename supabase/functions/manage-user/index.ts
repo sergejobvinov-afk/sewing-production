@@ -9,20 +9,20 @@ Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   try {
     const url = Deno.env.get('SUPABASE_URL')!
-    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const authorization = request.headers.get('Authorization') || ''
-    const callerClient = createClient(url, anonKey, { global: { headers: { Authorization: authorization } } })
-    const { data: { user }, error: userError } = await callerClient.auth.getUser()
-    if (userError || !user) throw new Error('Требуется вход администратора')
+    const accessToken = authorization.replace(/^Bearer\s+/i, '')
     const admin = createClient(url, serviceKey)
+    const { data: { user }, error: userError } = await admin.auth.getUser(accessToken)
+    if (userError || !user) throw new Error('Требуется вход администратора')
     const { data: profile } = await admin.from('profiles').select('role,active').eq('id', user.id).single()
-    if (!profile?.active || profile.role !== 'admin') throw new Error('Только администратор может управлять пользователями')
+    if (!profile?.active) throw new Error('Профиль пользователя не активирован')
 
     const body = await request.json()
     if (!/^\d{6}$/.test(String(body.pin || ''))) throw new Error('PIN должен содержать 6 цифр')
 
     if (body.action === 'create') {
+      if (profile.role !== 'admin') throw new Error('Только администратор может управлять пользователями')
       const login = String(body.login || '').trim().toLowerCase()
       const name = String(body.name || '').trim()
       const role = String(body.role || '')
@@ -42,6 +42,7 @@ Deno.serve(async (request) => {
 
     if (body.action === 'reset_pin') {
       const profileId = String(body.profileId || '')
+      if (profileId !== user.id && profile.role !== 'admin') throw new Error('Только администратор может менять PIN другого пользователя')
       const { error } = await admin.auth.admin.updateUserById(profileId, { password: String(body.pin) })
       if (error) throw error
       return json({ success: true, message: 'PIN изменён' })
