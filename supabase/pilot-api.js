@@ -215,7 +215,11 @@
               if (!byModel[op.model]) byModel[op.model] = [];
               byModel[op.model].push({ operation_name: op.operation_name });
             });
-            return { success: true, packs: packs.map(function (pack) { return packDto(pack, byModel[pack.model]); }) };
+            return {
+              success: true,
+              count: packs.length,
+              packs: packs.map(function (pack) { return packDto(pack, byModel[pack.model]); })
+            };
           });
       });
     },
