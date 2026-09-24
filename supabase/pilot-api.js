@@ -56,6 +56,11 @@
     return request('/rest/v1/rpc/' + name, { method: 'POST', body: JSON.stringify(body || {}) });
   }
 
+  function unwrapRpc(result) {
+    if (Array.isArray(result) && result.length === 1) return result[0];
+    return result;
+  }
+
   function statusLabel(value) { return STATUS_LABELS[value] || value || 'Новая'; }
   function dateText(value) { return value ? String(value).slice(0, 10) : ''; }
   function packDto(pack, operations) {
@@ -260,6 +265,15 @@
         return Array.from(new Set(rows.map(function (row) { return row.sewer_name; }).filter(Boolean)));
       });
     },
+    getDashboardData: function () {
+      return rpc('get_dashboard_data', {}).then(unwrapRpc);
+    },
+    getSewerPacks: function () {
+      return rpc('get_my_packs', {}).then(unwrapRpc);
+    },
+    getUsers: function () {
+      return rpc('get_managed_users', {}).then(unwrapRpc);
+    },
     scanAssign: function (qr, operationsData) {
       return rpc('issue_pack', { p_pack_id: String(qr).split('|')[0].trim(), p_operations: operationsData });
     },
@@ -280,8 +294,12 @@
     annulPackPassport: function (id, reason) {
       return rpc('annul_pack', { p_pack_id: id, p_reason: reason });
     },
-    addUser: readOnlyError,
-    toggleUser: readOnlyError
+    addUser: function () {
+      return Promise.resolve({ success: false, message: 'Создайте пользователя в Supabase Auth, затем добавьте ему профиль. Секрет администратора нельзя хранить в приложении.' });
+    },
+    toggleUser: function (profileId) {
+      return rpc('toggle_profile_active', { p_profile_id: profileId }).then(unwrapRpc);
+    }
   });
 
   window.API = pilotApi;
