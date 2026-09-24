@@ -82,7 +82,7 @@
   }
 
   function operationsForPack(packId) {
-    return table('pack_operations', 'select=operation_name,sewer_name,issued_qty,accepted_qty,issued_at,accepted_at,sewer_price&pack_id=eq.' + encodeURIComponent(packId) + '&order=id.asc')
+    return table('pack_operations', 'select=operation_name,sewer_name,issued_qty,accepted_qty,paid_qty,paid_at,issued_at,accepted_at,sewer_price&pack_id=eq.' + encodeURIComponent(packId) + '&order=id.asc')
       .then(function (rows) {
         return rows.map(function (op) {
           return {
@@ -90,6 +90,8 @@
             sewer: op.sewer_name || '',
             issued: Number(op.issued_qty) || 0,
             accepted: Number(op.accepted_qty) || 0,
+            paidQty: Number(op.paid_qty) || 0,
+            paidAt: op.paid_at || '',
             issuedDate: op.issued_at || '',
             acceptedDate: op.accepted_at || '',
             price: Number(op.sewer_price) || 0,
@@ -155,7 +157,7 @@
   function showAuthenticatedHome(result) {
     window.currentUser = { name: result.name, pin: '', role: result.role };
     if (typeof window.buildHomeMenu === 'function') window.buildHomeMenu();
-    if (typeof window.showScreen === 'function') window.showScreen('home', 'Швейное производство', 'Supabase · пилот');
+    if (typeof window.showScreen === 'function') window.showScreen('home', 'Швейное производство', 'Supabase · рабочая версия');
   }
 
   function sendMagicLink(email) {
@@ -315,6 +317,12 @@
     annulPackPassport: function (id, reason) {
       return rpc('annul_pack', { p_pack_id: id, p_reason: reason });
     },
+    markOperationPaid: function (packId, operationName) {
+      return rpc('mark_operation_paid', { p_pack_id: packId, p_operation_name: operationName }).then(unwrapRpc);
+    },
+    unmarkOperationPaid: function (packId, operationName) {
+      return rpc('unmark_operation_paid', { p_pack_id: packId, p_operation_name: operationName }).then(unwrapRpc);
+    },
     addUser: function (name, pin, role, unusedAdminPin, login) {
       return edge('manage-user', { action: 'create', name: name, login: login, pin: pin, role: role });
     },
@@ -362,7 +370,7 @@
     });
     if (loginButton) loginButton.insertAdjacentElement('afterend', magicButton);
     var badge = document.createElement('div');
-    badge.textContent = '⚡ SUPABASE PILOT';
+    badge.textContent = '⚡ РАБОЧАЯ ВЕРСИЯ';
     badge.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:9999;background:#0f766e;color:#fff;padding:6px 10px;border-radius:12px;font:700 11px system-ui;';
     document.body.appendChild(badge);
     finishMagicLinkLogin();
