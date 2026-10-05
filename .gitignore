@@ -4,3 +4,4 @@ supabase/config.js
 !.env.example
 supabase/import/*.sql
 supabase/import/*.html
+supabase/.temp/
