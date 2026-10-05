@@ -13,17 +13,19 @@ Deno.serve(async (request) => {
     const authorization = request.headers.get('Authorization') || ''
     const accessToken = authorization.replace(/^Bearer\s+/i, '')
     const admin = createClient(url, serviceKey)
+    const caller = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authorization } },
+      auth: { persistSession: false },
+    })
     const { data: { user }, error: userError } = await admin.auth.getUser(accessToken)
     if (userError || !user) throw new Error('Требуется вход администратора')
-    const { data: profile, error: profileError } = await admin.from('profiles').select('role,active').eq('id', user.id).single()
-    if (profileError) throw new Error(`Не удалось проверить права пользователя: ${profileError.message}`)
-    if (!profile?.active) throw new Error('Профиль пользователя не активирован')
 
     const body = await request.json()
     if (!/^\d{6}$/.test(String(body.pin || ''))) throw new Error('PIN должен содержать 6 цифр')
 
     if (body.action === 'create') {
-      if (String(profile.role).trim().toLowerCase() !== 'admin') throw new Error('Только администратор может управлять пользователями. Выйдите и войдите под учётной записью администратора')
+      const { error: permissionError } = await caller.rpc('get_managed_users')
+      if (permissionError) throw new Error('Только администратор может управлять пользователями. Выйдите и войдите под учётной записью администратора')
       const login = String(body.login || '').trim().toLowerCase()
       const name = String(body.name || '').trim()
       const role = String(body.role || '')
@@ -33,7 +35,11 @@ Deno.serve(async (request) => {
       const email = `${login}@users.sewing.local`
       const { data, error } = await admin.auth.admin.createUser({ email, password: String(body.pin), email_confirm: true })
       if (error) throw error
-      const { error: profileError } = await admin.from('profiles').insert({ id: data.user.id, display_name: name, role, active: true })
+      const { error: profileError } = await caller.rpc('create_managed_profile', {
+        p_profile_id: data.user.id,
+        p_name: name,
+        p_role: role,
+      })
       if (profileError) {
         await admin.auth.admin.deleteUser(data.user.id)
         throw profileError
@@ -43,7 +49,10 @@ Deno.serve(async (request) => {
 
     if (body.action === 'reset_pin') {
       const profileId = String(body.profileId || '')
-      if (profileId !== user.id && profile.role !== 'admin') throw new Error('Только администратор может менять PIN другого пользователя')
+      if (profileId !== user.id) {
+        const { error: permissionError } = await caller.rpc('get_managed_users')
+        if (permissionError) throw new Error('Только администратор может менять PIN другого пользователя')
+      }
       const { error } = await admin.auth.admin.updateUserById(profileId, { password: String(body.pin) })
       if (error) throw error
       return json({ success: true, message: 'PIN изменён' })
