@@ -15,14 +15,15 @@ Deno.serve(async (request) => {
     const admin = createClient(url, serviceKey)
     const { data: { user }, error: userError } = await admin.auth.getUser(accessToken)
     if (userError || !user) throw new Error('Требуется вход администратора')
-    const { data: profile } = await admin.from('profiles').select('role,active').eq('id', user.id).single()
+    const { data: profile, error: profileError } = await admin.from('profiles').select('role,active').eq('id', user.id).single()
+    if (profileError) throw new Error(`Не удалось проверить права пользователя: ${profileError.message}`)
     if (!profile?.active) throw new Error('Профиль пользователя не активирован')
 
     const body = await request.json()
     if (!/^\d{6}$/.test(String(body.pin || ''))) throw new Error('PIN должен содержать 6 цифр')
 
     if (body.action === 'create') {
-      if (profile.role !== 'admin') throw new Error('Только администратор может управлять пользователями')
+      if (String(profile.role).trim().toLowerCase() !== 'admin') throw new Error('Только администратор может управлять пользователями. Выйдите и войдите под учётной записью администратора')
       const login = String(body.login || '').trim().toLowerCase()
       const name = String(body.name || '').trim()
       const role = String(body.role || '')
