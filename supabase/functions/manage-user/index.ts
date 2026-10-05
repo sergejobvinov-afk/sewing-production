@@ -59,7 +59,13 @@ Deno.serve(async (request) => {
     }
     throw new Error('Неизвестное действие')
   } catch (error) {
-    return json({ success: false, message: error instanceof Error ? error.message : 'Ошибка' }, 400)
+    const message = error instanceof Error
+      ? error.message
+      : error && typeof error === 'object' && 'message' in error
+        ? String(error.message)
+        : typeof error === 'string' ? error : 'Неизвестная ошибка сервера'
+    console.error('manage-user:', message)
+    return json({ success: false, message }, 400)
   }
 })
 
