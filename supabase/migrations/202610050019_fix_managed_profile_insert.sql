@@ -1,5 +1,4 @@
--- Создание профиля после создания учётной записи через Edge Function.
--- Вызывается только действующим администратором.
+-- Исправление для уже развернутой функции: в profiles нет столбца created_by.
 create or replace function public.create_managed_profile(p_profile_id uuid,p_name text,p_role public.app_role)
 returns jsonb language plpgsql security definer set search_path=public as $$
 begin
