@@ -11,6 +11,7 @@ declare
   v_finance jsonb;
   v_production jsonb;
   v_sewers jsonb;
+  v_payroll_sewers jsonb;
   v_models jsonb;
   v_sizes jsonb;
 begin
@@ -80,6 +81,22 @@ begin
       else round(100*sum(accepted_qty*(client_price-sewer_price))/sum(accepted_qty*client_price),1) end)
   end into v_finance from operation_scope;
 
+  -- Текущая задолженность по зарплате не зависит от периода: это сумма,
+  -- которая должна совпадать с разделом «Оплата операций».
+  with payroll_scope as (
+    select coalesce(po.sewer_name,'Не назначена') sewer_name,
+      greatest(po.accepted_qty-po.paid_qty,0)*po.sewer_price due
+    from public.pack_operations po
+    where po.accepted_qty>po.paid_qty
+  ), payroll_rows as (
+    select sewer_name,coalesce(sum(due),0) due from payroll_scope group by sewer_name
+  )
+  select
+    v_finance || jsonb_build_object('payrollDueAllTime',case when v_role='master' then 0 else coalesce(sum(due),0) end),
+    coalesce(jsonb_agg(jsonb_build_object('name',sewer_name,'due',case when v_role='master' then 0 else due end)
+      order by due desc,sewer_name),'[]'::jsonb)
+  into v_finance,v_payroll_sewers from payroll_rows;
+
   with operation_scope as (
     select po.* from public.pack_operations po join public.packs p on p.id=po.pack_id
     where p.status<>'annulled' and (nullif(trim(p_model),'') is null or p.model=trim(p_model))
@@ -129,7 +146,7 @@ begin
   into v_models,v_sizes;
 
   return jsonb_build_object('success',true,'finance',v_finance,'production',v_production,
-    'sewers',v_sewers,'models',v_models,'sizes',v_sizes,
+    'sewers',v_sewers,'payrollSewers',v_payroll_sewers,'models',v_models,'sizes',v_sizes,
     'filters',jsonb_build_object('dateFrom',p_date_from,'dateTo',p_date_to,'dateKind',p_date_kind,'model',p_model));
 end; $$;
 
