@@ -36,7 +36,7 @@ async function dashboardApi(packs, operations, { failPage = false, role = 'admin
 function fixture() {
   const packs = [], operations = [];
   for (let i = 0; i < 502; i++) {
-    const hoodie = i >= 452, quantity = hoodie ? (i === 499 ? 1 : 15) : 1;
+    const hoodie = i >= 452, quantity = hoodie ? (i === 499 ? 1 : i === 501 ? 14 : 15) : 1;
     packs.push({ id: 'KR-' + i, model: hoodie ? 'ХудиМарина' : 'Другая модель', cut_date: '2026-10-21', size: 'M', quantity, status: 'accepted' });
     for (let j = 0; j < 2; j++) operations.push({ id: operations.length + 1, pack_id: 'KR-' + i, issued_qty: quantity,
       accepted_qty: quantity, defect_qty: 0, paid_qty: 0, client_paid_qty: 0, sewer_price: 40, client_price: 70, sewer_name: 'Анна',
@@ -45,20 +45,20 @@ function fixture() {
   return { packs, operations };
 }
 
-test('OTK dashboard includes the last two packs after row 1000: 736 items, not 706', async () => {
+test('OTK dashboard includes the last two packs after row 1000: 735 items, not 706', async () => {
   const { packs, operations } = fixture();
   // Reproduce the old, silently truncated scope before testing the fix.
   const oldPackIds = new Set(operations.slice(0, 1000).filter(op => op.accepted_at >= '2026-10-26').map(op => op.pack_id));
   assert.equal(packs.filter(p => oldPackIds.has(p.id)).reduce((sum, p) => sum + p.quantity, 0), 706);
   const { api, calls } = await dashboardApi(packs, operations);
   const result = await api.getDashboardDataFiltered('2026-10-26', '2026-11-18', 'accepted', 'ХудиМарина');
-  assert.equal(result.production.totalQty, 736);
-  assert.equal(result.production.totalOtk, 736, 'two operations on one pack must not double the item count');
+  assert.equal(result.production.totalQty, 735);
+  assert.equal(result.production.totalOtk, 735, 'two operations on one pack must not double the item count');
   assert.equal(result.production.totalPacks, 50);
-  assert.equal(result.models[0].items, 736);
-  assert.equal(result.models[0].accepted, 736);
-  assert.equal(result.sizes[0].items, 736);
-  assert.equal(result.finance.zp, 736 * 2 * 40, 'wages count each operation separately');
+  assert.equal(result.models[0].items, 735);
+  assert.equal(result.models[0].accepted, 735);
+  assert.equal(result.sizes[0].items, 735);
+  assert.equal(result.finance.zp, 735 * 2 * 40, 'wages count each operation separately');
   assert.equal(result.finance.payrollDueAllTime, 14, 'all-time debt still comes from complete Payments RPC');
   assert.deepEqual(calls.filter(c => c.path.pathname.endsWith('/pack_operations')).map(c => c.path.searchParams.get('offset')), ['0','500','1000']);
   assert.ok(calls.every(c => c.method === 'GET' || /\/rpc\/(get_dashboard_data_filtered|get_payment_operations)$/.test(c.path.pathname)));
@@ -86,7 +86,7 @@ test('master fallback keeps financial data hidden and does not request finance R
   const { packs, operations } = fixture();
   const { api, calls } = await dashboardApi(packs, operations, { role: 'master' });
   const result = await api.getDashboardDataFiltered('2026-10-26', '2026-11-18', 'accepted', 'ХудиМарина');
-  assert.equal(result.production.totalQty, 736);
+  assert.equal(result.production.totalQty, 735);
   assert.ok(Object.values(result.finance).every(value => value === 0));
   assert.equal(calls.filter(c => c.path.pathname.endsWith('get_payment_operations')).length, 0);
 });
