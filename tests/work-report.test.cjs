@@ -46,7 +46,8 @@ test('duplicates and invalid numbers or dates block misleading totals',()=>{
 test('lists beyond 2000 and export preserve the complete filtered remainder',()=>{
   const rows=Array.from({length:2501},(_,i)=>op({id:String(i+1),packId:'KR-'+i}));
   const r=work.build(rows,{now});assert.equal(r.rows.length,2501);assert.equal(r.totals.packRemaining,62525);
-  const text=work.csv(work.build([op({model:'=HYPERLINK("x")'})],{now}));
+  const text=work.csv(work.build([op({model:'=HYPERLINK("x")'})],{now,kind:'partial',minDays:7,search:'KR-1'}));
   assert.ok(text.includes("'=HYPERLINK"));assert.ok(text.includes('KR-1')&&text.includes('25'));
+  assert.ok(text.includes('Принято частично')&&text.includes('"Дней с выдачи от";7')&&text.includes('"Поиск";"KR-1"'));
   assert.ok(!text.includes('расценк')&&!text.includes('зарплат'));
 });
