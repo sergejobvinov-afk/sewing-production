@@ -116,6 +116,18 @@ test('pack status loads all operations, while pack lookup stays a unique limit=1
   assert.equal(result.operations[count - 1].price, 17.25);
 });
 
+test('outstanding work source reads every issued operation, with no financial RPC or writes', async () => {
+  const {api,calls}=await mockApi(fixture());
+  const result=await api.getWorkInProgress();
+  assert.equal(result.operations.length,count*2);
+  assert.equal(result.operations.at(-1).packId,packId(2500));
+  assert.equal(result.operations.at(-1).model,'Модель-2500');
+  assert.equal(result.operations.at(-1).defectQty,1);
+  assert.ok(calls.every(c=>c.method==='GET'));
+  const select=calls.find(c=>c.path.pathname.endsWith('/pack_operations')).path.searchParams.get('select');
+  assert.ok(!/price|paid/.test(select),'no financial columns are loaded for master');
+});
+
 test('fallback sewer report loads every operation and finds pack/model beyond row 2000 for all date kinds', async () => {
   const { api, calls } = await mockApi(fixture());
   for (const kind of ['accepted', 'issued', 'paid']) {
@@ -168,6 +180,7 @@ test('a later failure rejects every affected screen instead of returning a parti
     ['packs', api => api.getAllPacks()],
     ['operation_catalog', api => api.getAllPacks()],
     ['pack_operations', api => api.getAllPacks()],
+    ['pack_operations', api => api.getWorkInProgress()],
     ['operation_catalog', api => api.getModelList()],
     ['pack_operations', api => api.getSewerPeriodReport('Мутриба', '2026-11-01', '2026-11-23', 'accepted')],
     ['packs', api => api.getSewerPeriodReport('Мутриба', '2026-11-01', '2026-11-23', 'accepted')]
