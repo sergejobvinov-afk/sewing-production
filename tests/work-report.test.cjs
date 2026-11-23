@@ -51,3 +51,37 @@ test('lists beyond 2000 and export preserve the complete filtered remainder',()=
   assert.ok(text.includes('Принято частично')&&text.includes('"Дней с выдачи от";7')&&text.includes('"Поиск";"KR-1"'));
   assert.ok(!text.includes('расценк')&&!text.includes('зарплат'));
 });
+
+test('remaining cost uses every operation frozen rate, never the pack maximum multiplied by rates',()=>{
+  const r=work.build([op({sewerPrice:'0.10'}),op({id:'2',operationName:'Распошив',acceptedQty:40,defectQty:0,sewerPrice:'42.35'})],{now,includeFinance:true});
+  assert.equal(r.totals.packRemaining,25);assert.equal(r.totals.operationRemaining,35);
+  assert.equal(r.rows[0].remainingCostCents,250);assert.equal(r.rows[1].remainingCostCents,42350);
+  assert.equal(r.totals.remainingCostCents,42600);assert.equal(r.groups[0].remainingCostCents,42600);
+  assert.equal(r.financeAvailable,true);
+});
+test('cost follows the same sewer/model/date/acceptance filters and current accepted wages are excluded',()=>{
+  const rows=[op({sewerPrice:'42.30'}),op({id:'2',packId:'KR-2',model:'Юбка',sewerName:'Анна',acceptedQty:0,defectQty:0,sewerPrice:'0.10'})];
+  const r=work.build(rows,{now,includeFinance:true,sewer:'Анна',model:'Юбка',cutFrom:'2026-11-01',cutTo:'2026-11-01',kind:'none'});
+  assert.equal(r.rows.length,1);assert.equal(r.totals.remainingCostCents,500);assert.equal(r.groups[0].remainingCostCents,500);
+  const partial=work.build([rows[0]],{now,includeFinance:true});
+  assert.equal(partial.totals.remainingCostCents,105750,'only remaining 25 × 42.30, not accepted 20 or all issued 50');
+});
+test('non-financial view and CSV never expose a rate or cost, even if input contains rates',()=>{
+  const r=work.build([op({sewerPrice:'42.30',priceCents:4230,remainingCostCents:105750})],{now});
+  assert.equal(r.financeAvailable,false);assert.ok(!Object.hasOwn(r.totals,'remainingCostCents'));
+  for(const key of ['sewerPrice','priceCents','remainingCostCents'])assert.ok(!Object.hasOwn(r.rows[0],key));
+  assert.ok(!work.csv(r).includes('Расценка')&&!work.csv(r).includes('Стоимость'));
+});
+test('zero rates are explicit, invalid rates and unsafe money amounts block the calculation',()=>{
+  const zero=work.build([op({sewerPrice:0})],{now,includeFinance:true});
+  assert.equal(zero.totals.remainingCostCents,0);assert.equal(zero.totals.zeroPriceOperations,1);
+  for(const sewerPrice of [undefined,null,'','-1','0.001'])assert.throws(()=>work.build([op({sewerPrice})],{now,includeFinance:true}),/расценку/);
+  assert.throws(()=>work.build([op({issuedQty:Number.MAX_SAFE_INTEGER,packQty:Number.MAX_SAFE_INTEGER,acceptedQty:0,defectQty:0,sewerPrice:'1.00'})],{now,includeFinance:true}),/Сумма/);
+});
+test('financial export includes exact cents, frozen rate and remaining cost columns',()=>{
+  const r=work.build([op({sewerPrice:'42.35'})],{now,includeFinance:true});
+  const text=work.csv(r);
+  assert.ok(text.includes('Расценка швеи, ₽')&&text.includes('Стоимость остатка, ₽'));
+  assert.ok(text.includes('42,35')&&text.includes('1058,75'));
+  assert.ok(text.includes('Начисление зарплаты — после приёмки ОТК'));
+});

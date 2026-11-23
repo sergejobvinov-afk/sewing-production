@@ -21,7 +21,7 @@ function fixture() {
   return { packs, operations, catalog, profiles };
 }
 
-async function mockApi(data, { cap = 1000, fail, badRange = false, emptyPage = false, malformed = false, hideRange = false } = {}) {
+async function mockApi(data, { cap = 1000, fail, badRange = false, emptyPage = false, malformed = false, hideRange = false, role = 'admin' } = {}) {
   const calls = [];
   const ctx = {
     URLSearchParams, AbortController, setTimeout, clearTimeout, performance,
@@ -71,7 +71,7 @@ async function mockApi(data, { cap = 1000, fail, badRange = false, emptyPage = f
       return { ok, status, headers: { get: () => hideRange ? null : range }, text: async () => JSON.stringify(body) };
     }
   };
-  ctx.window = { location: { search: '?backend=supabase' }, API: {}, currentUser: { role: 'admin' },
+  ctx.window = { location: { search: '?backend=supabase' }, API: {}, currentUser: { role },
     SUPABASE_CONFIG: { url: 'https://example.test', anonKey: 'test-public-key' } };
   vm.runInNewContext(fs.readFileSync(process.env.PILOT_API_FILE || require.resolve('../supabase/pilot-api.js'), 'utf8'), ctx);
   await ctx.window.API.checkConnection();
@@ -117,15 +117,29 @@ test('pack status loads all operations, while pack lookup stays a unique limit=1
 });
 
 test('outstanding work source reads every issued operation, with no financial RPC or writes', async () => {
-  const {api,calls}=await mockApi(fixture());
+  const {api,calls}=await mockApi(fixture(),{role:'master'});
   const result=await api.getWorkInProgress();
   assert.equal(result.operations.length,count*2);
   assert.equal(result.operations.at(-1).packId,packId(2500));
   assert.equal(result.operations.at(-1).model,'Модель-2500');
   assert.equal(result.operations.at(-1).defectQty,1);
+  assert.equal(result.financeAvailable,false);
+  assert.ok(!Object.hasOwn(result.operations.at(-1),'sewerPrice'));
   assert.ok(calls.every(c=>c.method==='GET'));
   const select=calls.find(c=>c.path.pathname.endsWith('/pack_operations')).path.searchParams.get('select');
   assert.ok(!/price|paid/.test(select),'no financial columns are loaded for master');
+});
+
+test('admin and accountant load frozen operation rates through read-only requests',async()=>{
+  for(const role of ['admin','accountant']){
+    const {api,calls}=await mockApi(fixture(),{role});
+    const result=await api.getWorkInProgress();
+    assert.equal(result.financeAvailable,true);
+    assert.equal(result.operations.at(-1).sewerPrice,17.25);
+    assert.equal(result.operations.length,count*2);
+    assert.ok(calls.every(c=>c.method==='GET'));
+    assert.ok(calls.some(c=>(c.path.searchParams.get('select')||'').includes('sewer_price')));
+  }
 });
 
 test('fallback sewer report loads every operation and finds pack/model beyond row 2000 for all date kinds', async () => {
