@@ -36,7 +36,7 @@ test('historical sewer beyond operation 1000 remains selectable without a profil
   const { api, calls } = await sewerApi([{ display_name: 'Надира', active: true }], history);
   const names = await api.getSewerList();
   assert.deepEqual(Array.from(names), ['Мавлуда','Мафтуна','Мутриба','Надира']);
-  assert.deepEqual(calls.filter(c => c.path.pathname.endsWith('/pack_operations')).map(c => c.path.searchParams.get('offset')), ['0','500','1000']);
+  assert.deepEqual(calls.filter(c => c.path.pathname.endsWith('/pack_operations')).map(c => c.path.searchParams.get('offset')), ['0','500','1000','1250']);
   assert.ok(calls.every(c => c.method === 'GET'), 'loading names must not modify users or operations');
 });
 
@@ -54,7 +54,7 @@ test('profiles beyond 1000 rows are fully loaded too', async () => {
   const names = await api.getSewerList();
   assert.equal(names.length, 1001);
   assert.ok(names.includes('Швея-1000'));
-  assert.deepEqual(calls.filter(c => c.path.pathname.endsWith('/profiles')).map(c => c.path.searchParams.get('offset')), ['0','500','1000']);
+  assert.deepEqual(calls.filter(c => c.path.pathname.endsWith('/profiles')).map(c => c.path.searchParams.get('offset')), ['0','500','1000','1001']);
 });
 
 test('failure on a later page rejects instead of silently losing sewers', async () => {

@@ -60,7 +60,7 @@ test('OTK dashboard includes the last two packs after row 1000: 735 items, not 7
   assert.equal(result.sizes[0].items, 735);
   assert.equal(result.finance.zp, 735 * 2 * 40, 'wages count each operation separately');
   assert.equal(result.finance.payrollDueAllTime, 14, 'all-time debt still comes from complete Payments RPC');
-  assert.deepEqual(calls.filter(c => c.path.pathname.endsWith('/pack_operations')).map(c => c.path.searchParams.get('offset')), ['0','500','1000']);
+  assert.deepEqual(calls.filter(c => c.path.pathname.endsWith('/pack_operations')).map(c => c.path.searchParams.get('offset')), ['0','500','1000','1004']);
   assert.ok(calls.every(c => c.method === 'GET' || /\/rpc\/(get_dashboard_data_filtered|get_payment_operations)$/.test(c.path.pathname)));
 });
 
@@ -71,7 +71,7 @@ test('packs are also fully paginated and date/model filtering still applies', as
   const result = await api.getDashboardDataFiltered('2026-10-26', '2026-11-18', 'cut', 'ХудиМарина');
   assert.equal(result.production.totalQty, 15);
   assert.equal(result.production.totalPacks, 1);
-  assert.deepEqual(calls.filter(c => c.path.pathname.endsWith('/packs')).map(c => c.path.searchParams.get('offset')), ['0','500','1000']);
+  assert.deepEqual(calls.filter(c => c.path.pathname.endsWith('/packs')).map(c => c.path.searchParams.get('offset')), ['0','500','1000','1001']);
   const outsidePeriod = await api.getDashboardDataFiltered('2026-11-01', '2026-11-17', 'cut', 'ХудиМарина');
   assert.equal(outsidePeriod.production.totalQty, 0);
 });

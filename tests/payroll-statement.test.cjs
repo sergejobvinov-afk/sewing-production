@@ -92,7 +92,7 @@ test('API loads more than 1000 rows, reconciles Payments and never calls a write
   const report = await fixture.api.getPayrollStatementOperations('Анна');
   assert.equal(report.operations.length, 1250);
   assert.equal(payroll.build(report.operations).totals.amountCents, 158625000);
-  assert.deepEqual(fixture.calls.filter(c => c.path.pathname.endsWith('pack_operations')).map(c => c.path.searchParams.get('offset')), ['0','500','1000']);
+  assert.deepEqual(fixture.calls.filter(c => c.path.pathname.endsWith('pack_operations')).map(c => c.path.searchParams.get('offset')), ['0','500','1000','1250']);
   assert.ok(fixture.calls.every(c => c.method === 'GET' || c.path.pathname.endsWith('/rpc/get_payment_operations')));
 });
 
