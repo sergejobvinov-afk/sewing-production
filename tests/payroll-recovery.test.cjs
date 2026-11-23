@@ -72,3 +72,25 @@ test('export explains reconciliation, includes detail and neutralizes spreadshee
   assert.ok(text.includes('KR-1')&&text.includes('634,5'));
   assert.ok(text.includes('Сохранение файла не отмечает оплату'));
 });
+
+function savedPayment() {
+  return {...data([]),payments:[{batchId:'saved-1',paymentDate:'2026-11-09',recordedAt:'2026-11-23T15:00:00Z',count:2,amount:'296.60',entries:[
+    {eventId:'1',packId:'KR-1',passport:'П-1',model:'Блуза',cutDate:'2026-11-01',sewerName:'Анна',operationName:'Оверлок',qty:7,price:'42.30',amount:'296.10'},
+    {eventId:'2',packId:'KR-2',passport:'П-2',model:'Юбка',cutDate:'2026-11-01',sewerName:'Мутриба',operationName:'Распошив',qty:5,price:'0.10',amount:'0.50'}
+  ]}]};
+}
+test('saved receipt retains original added quantity, price, and amount independently of current debt',()=>{
+  const receipt=recovery.receipts(savedPayment());
+  assert.equal(receipt.amountCents,29660);assert.equal(receipt.entries.length,2);
+  const filtered=recovery.receipts(savedPayment(),{sewer:'Мутриба',model:'Юбка'});
+  assert.equal(filtered.amountCents,50);assert.equal(filtered.entries[0].qty,5);
+  assert.ok(recovery.receiptCsv(receipt).includes('2026-11-09'));
+  assert.ok(recovery.receiptCsv(receipt).includes('2026-11-23T15:00:00Z'));
+});
+test('missing rows, duplicate journal entries, wrong receipt sum and date are rejected',()=>{
+  let d=savedPayment();d.payments[0].count=3;assert.throws(()=>recovery.receipts(d),/Неполная/);
+  d=savedPayment();d.payments[0].entries[1].eventId='1';assert.throws(()=>recovery.receipts(d),/Повторная/);
+  d=savedPayment();d.payments[0].amount='297';assert.throws(()=>recovery.receipts(d),/итог/);
+  d=savedPayment();d.payments[0].entries[0].amount='297';assert.throws(()=>recovery.receipts(d),/сумма/);
+  d=savedPayment();d.payments[0].paymentDate='2026-11-10';assert.throws(()=>recovery.receipts(d),/Неполная/);
+});

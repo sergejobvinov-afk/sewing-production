@@ -35,6 +35,7 @@ insert into public.pack_events(pack_id,event_type,payload,created_at) values
  ('KR-7','Принято','{"operations":[{"operationName":"Оверлок","acceptedQty":"ошибка"}]}','2026-11-12Z');
 
 \ir ../supabase/migrations/202611230023_payroll_recovery.sql
+\ir ../supabase/migrations/202611230024_payroll_recovery_receipts.sql
 
 do $$
 declare preview jsonb; first_item jsonb; second_item jsonb; eighth_item jsonb; items jsonb; result jsonb; retry jsonb; n integer;
@@ -56,6 +57,8 @@ begin
   if (select paid_at::date from public.pack_operations where id=1)<>date '2026-11-09' then raise exception 'Effective date lost'; end if;
   retry:=public.record_payroll_recovery('2026-11-09',items,'00000000-0000-0000-0000-000000000010');
   if retry<>result or (select count(*) from public.pack_events where payload->>'source'='payroll_recovery')<>2 then raise exception 'Retry not idempotent'; end if;
+  preview:=public.get_payroll_recovery('2026-11-09');
+  if jsonb_array_length(preview->'payments')<>1 or jsonb_array_length(preview->'payments'->0->'entries')<>2 or (preview->'payments'->0->>'amount')::numeric<>296.60 then raise exception 'Saved receipt lost'; end if;
   -- Один свежий и один устаревший элемент: изменения первого тоже откатываются.
   begin
     perform public.record_payroll_recovery('2026-11-09',jsonb_build_array(jsonb_build_object('operationId','8','fingerprint',eighth_item->>'fingerprint'),items->0),'00000000-0000-0000-0000-000000000011');
