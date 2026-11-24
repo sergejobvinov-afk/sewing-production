@@ -20,7 +20,7 @@ function ui(getPreview){
   const fields=new Map(),reads=[],writes=[],loading=[],toasts=[];
   for(const id of ['date','sewer','model','mode','filter-status','result','history','notice','actions','exports','selection','record','select-all'])fields.set('recovery-'+id,new Element(['sewer','model','mode'].includes(id)?'select':'div'));
   fields.get('recovery-mode').innerHTML='<option value="due">Не отмечено</option><option value="all">Всё</option>';
-  const root={location:{search:'?payrollDate=2026-11-09'},currentUser:{role:'admin'},PayrollStatement:payroll,
+  const root={location:{search:'?payrollDate=2026-11-09'},currentUser:{role:'admin'},PayrollStatement:payroll,PayrollHistory:require('../payroll-history.js'),
     document:{getElementById:id=>fields.get(id),createElement:tag=>new Element(tag)},
     showScreen(){},showLoading:(id,value)=>loading.push(value),showToast:message=>toasts.push(message),
     API:{getPayrollRecovery:date=>{reads.push(date);return getPreview(date);},recordPayrollRecovery:()=>{writes.push(true);throw new Error('Unexpected payment write');}}};
@@ -96,4 +96,24 @@ test('clearing the date during load cancels the old result and never leaves filt
   app.el('date').value='';app.api.load();response.resolve(preview('2026-11-09'));await pending;
   assert.equal(app.el('sewer').disabled,false);assert.match(app.el('filter-status').textContent,/корректную дату/);
   assert.deepEqual(app.el('sewer').children.map(x=>x.value),['']);assert.equal(app.writes.length,0);
+});
+
+test('ordinary payment is shown for its actual date while zero means no missing marks',async()=>{
+  const d={...preview('2026-11-23',[]),operations:[{...operation(1,'Дильбар'),paidQty:40,recoveryQty:0,remainingAfter:0}],paymentEvents:[
+    {id:1,pack_id:'KR-1',event_type:'Оплата швее',created_at:'2026-11-23T10:00:00Z',payload:{operation:'Оверлок',paid:true,qty:25,source:'payroll_recovery',from_qty:0,to_qty:25}},
+    {id:2,pack_id:'KR-1',event_type:'Оплата швее',created_at:'2026-11-23T12:00:00Z',payload:{operation:'Оверлок',paid:true,qty:40}}
+  ]};
+  const app=ui(()=>Promise.resolve(d));app.el('date').value='2026-11-23';await app.api.load();
+  app.el('sewer').value='Дильбар';app.api.filter();
+  assert.match(app.el('history').innerHTML,/Дильбар/);assert.match(app.el('history').innerHTML,/634,5 ₽/);
+  assert.match(app.el('history').innerHTML,/15 × 42,3/);assert.match(app.el('result').innerHTML,/Это сумма пропущенных отметок, а не сумма выплаченной/);
+  assert.equal(app.writes.length,0);
+});
+
+test('incomplete payment journal shows an explicit warning instead of an authoritative zero',async()=>{
+  const d={...preview('2026-11-23'),paymentEvents:[]};
+  const app=ui(()=>Promise.resolve(d));app.el('date').value='2026-11-23';await app.api.load();
+  assert.match(app.el('history').innerHTML,/Состав выплаты требует проверки/);
+  assert.ok(!app.el('history').innerHTML.includes('Выплачено по ведомости:'));
+  assert.equal(app.writes.length,0);
 });
