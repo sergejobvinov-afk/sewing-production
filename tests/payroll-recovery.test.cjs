@@ -94,3 +94,49 @@ test('missing rows, duplicate journal entries, wrong receipt sum and date are re
   d=savedPayment();d.payments[0].entries[0].amount='297';assert.throws(()=>recovery.receipts(d),/сумма/);
   d=savedPayment();d.payments[0].paymentDate='2026-11-10';assert.throws(()=>recovery.receipts(d),/Неполная/);
 });
+
+test('saved model totals reconcile with the receipt and separate cut dates, operations and historic rates',()=>{
+  const d=savedPayment(),batch=d.payments[0],base=batch.entries[0];
+  batch.entries.push(
+    {...base,eventId:'3',packId:'KR-3',qty:'3',amount:'126.90'},
+    {...base,eventId:'4',qty:2,price:'50',amount:'100'},
+    {...base,eventId:'5',qty:4,cutDate:'2026-11-02',amount:'169.20'},
+    {...base,eventId:'6',qty:5,operationName:'Распошив',price:'10.10',amount:'50.50'}
+  );
+  batch.count=6;batch.amount='743.20';
+  const receipt=recovery.receipts(d),model=receipt.models.find(x=>x.model==='Блуза');
+  assert.equal(model.passportCount,2);assert.equal(model.qty,21);assert.equal(model.amountCents,74270);
+  assert.equal(model.calculations.length,4);
+  assert.deepEqual(model.calculations[0],{cutDate:'2026-11-01',operationName:'Оверлок',priceCents:4230,qty:10,amountCents:42300});
+  assert.equal(model.calculations[1].priceCents,5000);
+  assert.equal(model.calculations[2].operationName,'Распошив');
+  assert.equal(model.calculations[3].cutDate,'2026-11-02');
+  assert.equal(receipt.models.reduce((n,m)=>n+m.amountCents,0),receipt.amountCents);
+  assert.equal(model.calculations.reduce((n,r)=>n+r.amountCents,0),model.amountCents);
+  const filtered=recovery.receipts(d,{sewer:'Анна',model:'Блуза'});
+  assert.equal(filtered.models.length,1);assert.equal(filtered.amountCents,74270);
+  assert.equal(filtered.groups[0].amountCents,74270);
+  d.payments[0].entries[1].amount='999';
+  assert.throws(()=>recovery.receipts(d,{sewer:'Анна'}),/сумма/,'Excluded rows must still be validated');
+});
+
+test('saved summaries combine multiple batches without losing pennies or merging sewers',()=>{
+  const d=savedPayment(),base=d.payments[0].entries[1];
+  d.payments.push({batchId:'saved-2',paymentDate:d.paymentDate,recordedAt:'2026-11-24T12:00:00Z',count:2,amount:'0.90',entries:[
+    {...base,eventId:'3',qty:3,amount:'0.30'},
+    {...base,eventId:'4',qty:6,sewerName:'Анна',amount:'0.60'}
+  ]});
+  const receipt=recovery.receipts(d),mutriba=receipt.models.find(x=>x.sewerName==='Мутриба');
+  assert.equal(receipt.amountCents,29750);assert.equal(receipt.models.length,3);
+  assert.equal(mutriba.qty,8);assert.equal(mutriba.amountCents,80);assert.equal(mutriba.passportCount,1);
+  assert.equal(mutriba.calculations.length,1);assert.equal(mutriba.calculations[0].amountCents,80);
+});
+
+test('saved model summary includes every row beyond the old thousand-row limit',()=>{
+  const d=savedPayment(),batch=d.payments[0],base=batch.entries[0];
+  batch.entries=Array.from({length:2501},(_,i)=>({...base,eventId:String(i+1),packId:'KR-'+(i+1),qty:1,price:'0.10',amount:'0.10'}));
+  batch.count=2501;batch.amount='250.10';
+  const receipt=recovery.receipts(d);
+  assert.equal(receipt.models[0].qty,2501);assert.equal(receipt.models[0].passportCount,2501);
+  assert.equal(receipt.models[0].amountCents,25010);assert.equal(receipt.amountCents,25010);
+});

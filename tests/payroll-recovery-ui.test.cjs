@@ -46,7 +46,29 @@ test('saved-receipt-only sewer remains selectable and filters the saved statemen
   assert.deepEqual(app.el('model').children.map(x=>x.value),['','ЛонгКрючки']);
   app.el('sewer').value='Мутриба';app.api.filter();
   assert.match(app.el('history').innerHTML,/Мутриба/);assert.match(app.el('history').innerHTML,/190 ₽/);
+  assert.match(app.el('history').innerHTML,/Сводная по моделям/);
+  assert.match(app.el('history').innerHTML,/ЛонгКрючки/);
+  assert.match(app.el('history').innerHTML,/Оверлок/);
+  assert.match(app.el('history').innerHTML,/29\.10\.2026/);
+  assert.match(app.el('history').innerHTML,/2 × 95/);
+  assert.match(app.el('history').innerHTML,/<details open>/);
   assert.equal(app.el('actions').hidden,true);assert.equal(app.writes.length,0);
+});
+
+test('saved model totals and calculations follow both filters and escape names without payment writes',async()=>{
+  const saved={...preview('2026-11-09',[]),payments:[{batchId:'saved',paymentDate:'2026-11-09',recordedAt:'2026-11-23T12:00:00Z',count:3,amount:'310',entries:[
+    {eventId:'1',packId:'KR-1',passport:'П-1',model:'Блуза',cutDate:'2026-11-01',sewerName:'Анна',operationName:'Оверлок',qty:2,price:'95',amount:'190'},
+    {eventId:'2',packId:'KR-2',passport:'П-2',model:'Юбка',cutDate:'2026-11-02',sewerName:'Мутриба',operationName:'Распошив',qty:3,price:'30',amount:'90'},
+    {eventId:'3',packId:'KR-3',passport:'П-3',model:'<Топ>',cutDate:'2026-11-03',sewerName:'Мутриба',operationName:'<Оверлок>',qty:2,price:'15',amount:'30'}
+  ]}]};
+  const app=ui(()=>Promise.resolve(saved));await app.api.open();
+  assert.match(app.el('history').innerHTML,/ведомости: 310 ₽/);
+  assert.match(app.el('history').innerHTML,/&lt;Топ&gt;/);assert.ok(!app.el('history').innerHTML.includes('<Топ>'));
+  app.el('sewer').value='Мутриба';app.api.filter();
+  assert.match(app.el('history').innerHTML,/ведомости: 120 ₽/);assert.ok(!app.el('history').innerHTML.includes('Блуза'));
+  app.el('model').value='Юбка';app.api.filter();
+  assert.match(app.el('history').innerHTML,/ведомости: 90 ₽/);assert.match(app.el('history').innerHTML,/3 × 30/);
+  assert.ok(!app.el('history').innerHTML.includes('&lt;Топ&gt;'));assert.equal(app.writes.length,0);
 });
 
 test('changing date reloads read-only data and preserves the chosen sewer if available',async()=>{
